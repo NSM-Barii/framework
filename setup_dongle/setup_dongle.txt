@@ -1,0 +1,110 @@
+TITLE: Flashing nRF52840 BLE Sniffer Firmware on Linux (UF2 Method)
+
+HARDWARE:
+- nRF52840 USB dongle with UF2 bootloader
+- Confirmed as: nRF52840-MDK-USB-DONGLE / GeeekPi / Makerdiary-style
+
+GOAL:
+- Flash Nordic BLE Sniffer firmware
+- Enable full BLE connection tracking in Wireshark
+- Linux-only, no Nordic tools, no Windows, no nrfutil
+
+==================================================
+STEP 1 — ENTER UF2 BOOTLOADER MODE
+==================================================
+1. Unplug the dongle
+2. Hold the RESET button
+3. Plug the dongle back in while holding RESET
+4. Release after ~2 seconds
+
+EXPECTED RESULT:
+- Device mounts as a USB drive named:
+  UF2BOOT
+- Files visible:
+  - CURRENT.UF2
+  - INDEX.HTM
+  - INFO_UF2.TXT
+
+If UF2BOOT appears, the board is flashable via drag-and-drop.
+
+==================================================
+STEP 2 — PREPARE UF2 CONVERTER
+==================================================
+From your working directory:
+
+Download the UF2 converter script:
+  wget https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2conv.py
+
+Download the required family database:
+  wget https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2families.json
+
+==================================================
+STEP 3 — CONVERT NORDIC SNIFFER HEX TO UF2
+==================================================
+Input firmware used:
+  sniffer_nrf52840dongle_nrf52840_4.1.1.hex
+
+Convert HEX → UF2:
+  python3 uf2conv.py sniffer_nrf52840dongle_nrf52840_4.1.1.hex \
+    --family 0xADA52840 \
+    --base 0x0 \
+    -o sniffer.uf2
+
+EXPECTED RESULT:
+- File created: sniffer.uf2
+- No errors
+
+==================================================
+STEP 4 — FLASH VIA UF2 (NO TOOLS)
+==================================================
+Copy the UF2 file to the mounted bootloader:
+
+  cp sniffer.uf2 /run/media/$USER/UF2BOOT/
+
+EXPECTED BEHAVIOR:
+- Copy pauses briefly
+- UF2BOOT auto-ejects
+- Dongle reboots automatically
+
+This indicates a SUCCESSFUL FLASH.
+If flashing fails, the drive will NOT eject.
+
+==================================================
+STEP 5 — VERIFY FLASH SUCCESS
+==================================================
+Unplug the dongle
+Plug it back in normally (do NOT hold reset)
+
+Check USB ID:
+  lsusb
+
+EXPECTED RESULT:
+  ID 1915:522a Nordic Semiconductor ASA nRF Sniffer for Bluetooth LE
+
+==================================================
+STEP 6 — USE IN WIRESHARK
+==================================================
+1. Open Wireshark
+2. Select interface:
+   "nRF Sniffer for Bluetooth LE"
+3. Start capture
+
+EXPECTED RESULT:
+- BLE advertising packets
+- CONNECT_IND packets
+- Data packets across hopping channels
+
+This confirms:
+- Sniffer firmware is running
+- Full BLE connection tracking works
+
+==================================================
+NOTES / IMPORTANT
+==================================================
+- Nordic nrfutil / DFU tools are NOT required
+- This method bypasses broken Linux + Windows tooling
+- UF2 flashing is the correct method for this hardware
+- Firmware persists until overwritten
+
+STATUS:
+SUCCESS — BLE SNIFFER OPERATIONAL
