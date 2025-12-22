@@ -1,0 +1,30 @@
+# INSTALL NRF TOOLS / SOFTWARE SETUP
+
+
+# For installing nrfutil cli
+1. pip3 install --user nrfutil --break-system-packages
+
+   nrfutil version
+   nrfutil dfu usb-serial -pkg /path/to/sniffer_firmware 
+
+   https://www.nordicsemi.com/Products/Development-tools/nRF-Util?lang=en#infotabs
+
+
+
+# Once this is installed u can then download other tools from within this exe
+1. https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-Desktop
+
+
+# Software needed to flash nordic chipset
+2. https://www.segger.com/downloads/jlink/
+
+
+
+# Hold the button on the chip while plugging it in for 3 seconds
+
+3. https://www.nordicsemi.com/Products/Development-tools/nrf-command-line-tools/download#infotabs
+
+
+
+# EXTRA INFO
+https://docs.nordicsemi.com/bundle/nrfutil/page/nrfutil-ble-sniffer/guides/programming_firmware.html

@@ -57,7 +57,6 @@ func BLE_Scanner() {
 
 
 
-
 		device := BLE{
 			Name: name,
 			Addr: addr,
@@ -98,4 +97,26 @@ func Main(){
 	adapter.StopScan()
 	println("[-] Terminated BLE Scan!")
 	//println("Total Devices Found: ", len(BLE_Scanner.devices))
+}
+
+
+
+
+
+
+
+func BLE_Scanner_2(){
+
+
+	var adapter_1 = bluetooth.DefaultAdapter
+
+
+	if err := adapter_1.Enable(); err != nil{
+		fmt.Println(err)
+	}
+
+
+	adapter_1.Scan()
+
+
 }
