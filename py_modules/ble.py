@@ -33,6 +33,20 @@ class BLE_Sniffer():
 
         return devices
     
+    
+
+    @staticmethod
+    def _get_manuf(manuf):
+        """This will parse and get manuf"""
+
+
+        data = {}
+
+        for key, value in manuf.items():
+            data[key] = value.hex()
+
+        return data
+
 
 
     @classmethod
@@ -60,10 +74,10 @@ class BLE_Sniffer():
                 if mac not in cls.devices:
 
 
-                    name = adv.local_name or False
-                    rssi = adv.rssi
-                    uuid = adv.service_uuids or False
-                    manuf = adv.manufacturer_data
+                    name  = adv.local_name or False
+                    rssi  = adv.rssi
+                    uuid  = adv.service_uuids or False
+                    manuf = BLE_Sniffer._get_manuf(manuf=adv.manufacturer_data) or False
 
 
                     data = {
@@ -125,32 +139,32 @@ class BLE_Enumerater():
     async def _connect(target):
         """This method will be responsible for device connection"""
 
+        while True:
+            try:
 
-        try:
-
-            console.print(f"[bold yellow][*] Attempting Connection...")
+                console.print(f"[bold yellow][*] Attempting Connection...")
 
 
-            async with BleakClient(target) as client:
+                async with BleakClient(target) as client:
 
-                if client.is_connected:
+                    if client.is_connected:
 
-                    console.print(f"[bold green][+] Successfully Connected to:[red] {target}")
+                        console.print(f"[bold green][+] Successfully Connected to:[red] {target}")
 
+                        
+                        # ENUMARATE SERVICES
+                        await BLE_Enumerater._enumeration(client=client) 
+
+                        console.print(f"\n\n[bold red][-] Disconnected from:[bold yellow] {target}"); return True
                     
-                    # ENUMARATE SERVICES
-                    await BLE_Enumerater._enumeration(client=client) 
-
-                    console.print(f"\n\n[bold red][-] Disconnected from:[bold yellow] {target}"); return True
-                
-                 
-                console.print(f"\n\n[bold red][-] Failed to connect to:[bold yellow] {target}"); return False
+                    
+                    console.print(f"\n\n[bold red][-] Failed to connect to:[bold yellow] {target}"); return False
 
         
 
 
-        except Exception as e:
-            console.print(f"[bold red]Connector Exception Error:[bold yellow] {e}")
+            except Exception as e:
+                console.print(f"[bold red]Enumerator Exception Error:[bold yellow] {e}")
 
  
 
@@ -235,32 +249,32 @@ class BLE_Fuzzer():
         """This method will connect and create client"""
 
 
+        while True:
+            try:
 
-        try:
-
-            console.print(f"[bold yellow][*] Attempting Connection...")
+                console.print(f"[bold yellow][*] Attempting Connection...")
 
 
-            async with BleakClient(target) as client:
+                async with BleakClient(target) as client:
 
-                if client.is_connected:
+                    if client.is_connected:
 
-                    console.print(f"[bold green][+] Successfully Connected to: {target}")
+                        console.print(f"[bold green][+] Successfully Connected to: {target}")
 
+                        
+                        # FUZZ SERVICES
+                        await BLE_Fuzzer._fuzzer(client=client, uuid=uuid, f_type=f_type), client.pair()
+
+                        console.print(f"\n\n[bold red][-] Disconnected from:[bold yellow] {target}"); return True
                     
-                    # FUZZ SERVICES
-                    await BLE_Fuzzer._fuzzer(client=client, uuid=uuid, f_type=f_type) 
+                    
+                    console.print(f"\n\n[bold red][-] Failed to connect to:[bold yellow] {target}"); return False
 
-                    console.print(f"\n\n[bold red][-] Disconnected from:[bold yellow] {target}"); return True
-                
-                 
-                console.print(f"\n\n[bold red][-] Failed to connect to:[bold yellow] {target}"); return False
-
-        
+            
 
 
-        except Exception as e:
-            console.print(f"[bold red]Connector Exception Error:[bold yellow] {e}")
+            except Exception as e:
+                console.print(f"[bold red]Fuzzer Exception Error:[bold yellow] {e}")
 
 
 
@@ -285,7 +299,16 @@ class BLE_Fuzzer():
 
         console.print(f"[bold green][+] Fuzz Type:[/bold green] {f_type}")
         console.print(f"[bold green][+] Fuzzing --> [/bold green] {uuid} \n"); time.sleep(.5)
- 
+
+
+        def noty(uuid, char):
+            """This will be a callback for notifications"""
+
+            console.print(f"[bold green][*] UUID:[/bold green] {uuid} -> {char}")
+        
+        await client.pair()
+        await client.start_notify(char_specifier="00000002-0000-1001-8001-00805f9b07d0", callback=noty)
+
         
         if f_type == 1:
 

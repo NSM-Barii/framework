@@ -41,7 +41,7 @@ class Main_Menu():
    # help = args.h 
     scan = args.s 
     time = args.t 
-    mac = args.m.strip() 
+    mac = args.m
     dump = args.d
     fuzz = args.f
     vendor = args.v
@@ -58,7 +58,9 @@ class Main_Menu():
 
         if not mac: console.print(f"[bold red]use -m to pass a MAC Addr silly goose..."); exit()
 
-        elif vendor: Utilities.get_vendor(mac=mac)
+        mac = mac.strip()
+
+        if vendor: Utilities.get_vendor(mac=mac)
 
         elif dump: BLE_Enumerater.main(target=mac)
         
@@ -67,7 +69,6 @@ class Main_Menu():
 
 
         
-
 
 
 
