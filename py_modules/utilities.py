@@ -22,7 +22,7 @@ class Utilities():
 
 
     @classmethod
-    def get_vendor(cls, mac: str) -> str:
+    def get_vendor(cls, mac: str, verbose=True) -> str:
         """MAC --> Vendor | lookup"""
         
         try:
@@ -30,10 +30,11 @@ class Utilities():
             manuf_path = str(Path(__file__).parent / "manuf.txt")
 
             vendor = manuf.MacParser(manuf_path).get_manuf_long(mac=mac)
-
-            console.print(f"Manuf.txt pulled -> {manuf_path}")            
-            console.print(f"[bold green][+] Vendor Lookup:[/bold green] {vendor} -> {mac}"); return vendor
             
+            if verbose:
+                console.print(f"Manuf.txt pulled -> {manuf_path}")            
+                console.print(f"[bold green][+] Vendor Lookup:[/bold green] {vendor} -> {mac}"); return vendor
+                
         
 
         except FileNotFoundError:
