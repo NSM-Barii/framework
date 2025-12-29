@@ -1,3 +1,5 @@
+# DOCUMENATION FOR REFERENCE // LETS MAKE IT BETTER LOL
+
 
 import asyncio
 import sys

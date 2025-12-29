@@ -13,7 +13,7 @@ from bleak import BleakClient, BleakScanner
 
 
 # ETC IMPORTS
-import asyncio, os, time
+import asyncio, os, time, random
 
 
 # NSM IMPORTS
@@ -111,13 +111,11 @@ class BLE_Sniffer():
             
 
             console.print(f"\n[bold green][+] Found a total of:[bold yellow] {len(devices)} devices")
-                
-        except KeyboardInterrupt:
-            return KeyboardInterrupt
 
 
-        except Exception as e:
-            console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}")
+        except KeyboardInterrupt: return KeyboardInterrupt
+
+        except Exception as e: console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}")
 
 
 
@@ -187,7 +185,7 @@ class BLE_Enumerater():
 
         try:
 
-            services = list(client.services)
+            services = list(client.services) 
             if not services: console.print("[bold red][-] No services found on this device!"); return
 
             console.print(f"[bold green][*][bold yellow] Found {len(services)} service(s).\n")
@@ -220,6 +218,7 @@ class BLE_Enumerater():
                     c1 = "bold red"; c2 = "bold yellow"; c3 = "bold green"
                     uuid = char.uuid; description = char.description
                     handle = char.handle; properties = char.properties
+ 
 
                     console.print(
                         f"{space}[{c3}][+] UUID:[white] {uuid}"
@@ -294,50 +293,40 @@ class BLE_Fuzzer():
     async def _get_uuids(cls, client):
         """This method will be responsible for automatically pulling uuids and chars to then pass them to --> _fuzzer"""
 
-        
-        services_characteristics_data = {}
+
         c_count = 0
-        services = list(client.services) or False
+        services = list(client.services) 
 
 
         if not services: console.print("[bold red][!] No services were found!"); return False
         
 
-       
-        for service in services:
+        try:
 
-            
-            try:
+            for service in services:
 
-                service_uuid = service.uuid; description = service.description; handle = service.handle; characteristics = service.characteristics or False 
-
-                services_characteristics_data[str(service_uuid)] = {
-                    "uuid": service_uuid,
-                    "description": description,
-                    "handle": handle,
-                    "character_#": len(characteristics),
-                    "characteristics": {}
-                }
-
+                service_uuid = service.uuid; description = service.description; handle = service.handle; characteristics = service.characteristics or False
 
                 if not characteristics: continue
                 chars = []
 
 
                 for character in characteristics:
-
+                
+    
                     uuid = character.uuid; description = character.description; handle = character.handle; properties = character.properties
                     hi = (uuid, properties); chars.append(hi); c_count+= 1
 
+
         
-            except Exception as e:
-                console.print(f"[bold red]Exception Error:[bold yellow] {e}")
-            
+        except Exception as e:
+            console.print(f"[bold red]Exception Error:[bold yellow] {e}")
+        
 
-            finally: 
-                console.print(f"[bold green][*][bold yellow] Found {len(services)} service(s) & {c_count} Characteristic(s)).\n"); return chars
+        finally: 
+            console.print(f"[bold green][*][bold yellow] Found {len(services)} service(s) & {c_count} Characteristic(s)).\n"); return chars
 
-                    
+                
 
     @classmethod
     async def _fuzzer(cls, client, uuid: any, send, response, f_type: int):
@@ -394,10 +383,9 @@ class BLE_Fuzzer():
             
 
             console.print(f"[bold red][+] Fuzzing[/bold red][bold yellow] -->[/bold yellow] {valid_uuids}\n")
-        
 
-        if cls.user: console.print(f"[bold red][+] Fuzzing[/bold red][bold yellow] -->[/bold yellow] {uuid}\n")
-        
+
+        elif cls.user: console.print(f"[bold red][+] Fuzzing[/bold red][bold yellow] -->[/bold yellow] {uuid}\n"); valid_uuids.append(uuid) 
 
 
 
@@ -417,9 +405,9 @@ class BLE_Fuzzer():
                     for id in valid_uuids:
                         for payload in payloads:
                         
-                            payload = b"\1E240";  data = "123456".encode('utf-8')
-                            await client.write_gatt_char(char_specifier=str(id).strip(), data=b"123456", response=response); t -= 1
-                            console.print(f"[bold red][*] Fuzzing:[cyan] {data.hex()}")
+                            payload = os.urandom(random.randint(1,70))
+                            await client.write_gatt_char(char_specifier=str(id).strip(), data=payload, response=response); t -= 1
+                            console.print(f"[bold red][*] Fuzzing:[cyan] {payload.hex()}")
                 
                         #await asyncio.sleep(1)
 
@@ -451,28 +439,46 @@ class BLE_Connection_Spam():
 
 
         active = True
+        time_all = 0
+        time_average = 0
         connections = 0
+        errors = 0
         client = BleakClient(address_or_ble_device=target, timeout=10)
+        panel = Panel(renderable=f"Average TTC:  Errors: ", title="Connection Stats",style="bold cyan", expand=False)
 
-        console.print(f"[bold yellow][*] Attempting Connection...")
-
-
-        while active:
-            try:
-                               
-                await client.connect()
-                client.unpair()
-                if pair: await client.pair(); console.print("\n[bold red][!] Successfully Paired!")
-               # await asyncio.sleep(0.1)
-                await client.disconnect(); console.print("\n[bold red][!] Gracefully Disconnected")
-                
-                console.print(f"[bold red][!][bold yellow] Connection #{connections}"); connections += 1
+        c1 = "bold yellow"
+        c2 = "bold green"
 
 
-            except Exception as e:
-                console.print(f"[bold red]Connection_Spam Exception Error:[bold yellow] {e}")
-                await client.disconnect(); await asyncio.sleep(0.1)
-    
+        console.print(f"[bold yellow][*] Attempting Connection..."); print("TTC == Time to connect")
+
+        
+        try:
+            with Live(panel, console=console, refresh_per_second=4):
+                while active:
+                    time_start = time.time()
+                    if connections != 0: time_average = time_all / connections
+                    try:
+
+                        panel.renderable = f"[{c2}]Average TTC:[{c1}] {time_average:.2f}  -  [{c2}]Errors:[{c1}] {errors}"
+                                    
+                        await client.connect(); time_took = time.time() - time_start; time_all += time_took
+                        if pair: await client.pair(); console.print("\n[bold red][!] Successfully Paired!")
+                    # await asyncio.sleep(0.1)
+                        await client.disconnect(); console.print("\n[bold red][!] Gracefully Disconnected")
+                        
+                        console.print(f"[bold red][*][bold yellow] Connection #{connections} - TTC: {time_took:.2f} seconds"); connections += 1
+
+
+                    except KeyboardInterrupt: console.print("[bold yellow][!] Exiting..."); exit()
+
+
+                    except Exception as e:
+                        console.print(f"[bold red]Connection_Spam Exception Error:[bold yellow] {e}")
+                        await client.disconnect(); await asyncio.sleep(0.1); errors += 1
+        
+        
+        except KeyboardInterrupt: console.print("[bold yellow][!] Exiting..."); exit()
 
 
     @classmethod

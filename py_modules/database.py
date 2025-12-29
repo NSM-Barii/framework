@@ -154,7 +154,7 @@ class DataBase():
             data = {}
             for key, value in manufacturer_hex.items():
                 id = key
-                data[key] = value.hex()
+                data[key] = value.hex(); etc = value.hex()
             
 
         company_ids = DataBase._importer(file_path=cls.company_ids_path, verbose=False)
@@ -168,7 +168,7 @@ class DataBase():
 
                 if verbose: console.print(f"[bold green][+] {id} --> {manufacturer}")
                 
-                return manufacturer
+                return (manufacturer, etc)
         
         return False
 
