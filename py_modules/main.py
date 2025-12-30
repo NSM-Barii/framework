@@ -34,14 +34,13 @@ class Main_Menu():
     parser.add_argument("-t", default=10, help="Set timeout for how long ble scan may persist")
     parser.add_argument("-m", help="Set mac address for targeted control")
 
-
     parser.add_argument("-d", action="store_true", help="Connect to MAC Addr, enumerate and dump gatt services.")
-    parser.add_argument("-f",action="store_true", help="Fuzz a target MAC Addr and all its characteristics automatically with random bits of data")
-    parser.add_argument("-ft", help="Fuzz a target MAC Addr and the inputted characteristic with random bytes of data")
 
     parser.add_argument("-c", action="store_true", help="Perform a connection spam on targe MAC Addr")
     parser.add_argument("-cp", action="store_true", help="Perform a connection/Pairing spam on targe MAC Addr")
 
+    parser.add_argument("-f",action="store_true", help="Fuzz a target MAC Addr and all its characteristics automatically with random bits of data")
+    parser.add_argument("-ft", help="Fuzz a target MAC Addr and the inputted characteristic with random bytes of data")
     parser.add_argument("--type", help="The type of fuzzing you want to be done")
     parser.add_argument("--send", help="Properties to write to: write, write-without-response, read, notify, all")
     parser.add_argument("--response", help="Set write-response from client to True or False - 0 or 1")

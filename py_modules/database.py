@@ -37,7 +37,6 @@ class DataBase():
 
                 return data 
         
-       
 
     @staticmethod
     def _services():
@@ -130,31 +129,99 @@ class DataBase():
                 "likelihood": "Low"
             }
         ]
-        
+    
+
+    @staticmethod
+    def _etcs() -> str:
+        """Hold data"""
+
+        mappings = {
+            "12020002": "Apple Watch (device class)",
+            "12020003": "Apple Audio Accessory (e.g. AirPods)",
+            "12020000": "Apple Setup Device (generic)",
+            "10063b1d": "Apple Nearby/Continuity rotating ID"
+        }
+
+        return mappings 
    
+
     @classmethod
     def _get_service_uuids(cls, uuid: any) -> str:
         """this will take given services and parse them through known database"""
 
 
         pass
+    
+    
 
+    @classmethod
+    def _get_uuids_main(cls, CONSOLE: str, uuid:any, verbose=False) -> any:
+        """Are uuids vulnerable and or mapable"""
+
+
+
+        services = DataBase._services()
+
+
+        if len(uuid) > 1:
+
+            for service in services:
+                for id in uuid:
+
+                    if id == service: 
+
+                        if verbose: CONSOLE.print(f"[bold green][+] Mapped service:[bold yellow] uuid <--> {service} ")
+
+                        return service
+            
+
+            return False
+        
+
+
+        else:
+            
+            for service in service:
+
+                if uuid == service: 
+                    if verbose: CONSOLE.print(f"[bold green][+] Mapped service:[bold yellow] uuid <--> {service} ")
+
+                    return service
+            
+
+            return False
+
+
+
+        
+
+
+    @classmethod
+    def _get_etc(cls, data: any, verbose=False) -> str:
+        """etc --> model"""
+
+        mapping = DataBase._etcs()
+
+        for key, value in mapping.items():
+
+            if data == key:
+
+                if verbose: console.print(f"[+] Found: {key} --> {value}")
+
+                return value
+            
 
     @classmethod
     def _get_manufacturers(cls, manufacturer_hex, verbose=True) -> str:
         """Manufacturer ID --> Manufacturer / Vendor"""
 
-        id = 0
-
+ 
         if not manufacturer_hex: return "N/A"
-        #elif isinstance(id, int): id = manufacturer_hex
 
 
-        if not id:
-            data = {}
-            for key, value in manufacturer_hex.items():
-                id = key
-                data[key] = value.hex(); etc = value.hex()
+        data = {}
+        for key, value in manufacturer_hex.items():
+            id = key; data = DataBase._get_etc(data=value.hex())
             
 
         company_ids = DataBase._importer(file_path=cls.company_ids_path, verbose=False)
@@ -168,7 +235,8 @@ class DataBase():
 
                 if verbose: console.print(f"[bold green][+] {id} --> {manufacturer}")
                 
-                return (manufacturer, etc)
+                if data: return f"{manufacturer} | {data}"
+                return manufacturer
         
         return False
 
@@ -183,7 +251,7 @@ class DataBase():
         
         try:
 
-            manuf_path = str(Path(__file__).parent / "old_manuf.txt")
+            manuf_path = str(Path(__file__).parent.parent / "database" / "manuf_old.txt")
 
             vendor = manuf.MacParser(manuf_path).get_manuf_long(mac=mac)
             
@@ -211,15 +279,12 @@ class DataBase():
 
         try:
 
-            manuf_path = str(Path(__file__).parent / "manuf.txt")
+            manuf_path = str(Path(__file__).parent.parent / "database" / "manuf_ring_mast4r.txt")
 
             mac_prefix = mac.split(':'); prefix = mac_prefix[0] + mac_prefix[1] + mac_prefix[2]
 
 
             with open(manuf_path, "r") as file:
-
-                #if  verbose: console.print(f"[bold green][+] Successfully pulled: {manuf_path}")
-
 
                 for line in file:
                     parts = line.strip().split('\t')
@@ -229,6 +294,7 @@ class DataBase():
                         vendor = parts[1]
 
                         if verbose: console.print(f"[bold green][+] {parts[0]} --> {vendor}" )
+                        
                         return vendor
 
 
@@ -239,6 +305,17 @@ class DataBase():
         except Exception as e:
             console.print(f"[bold red][-] Exception Error:[bold yellow] {e}")
     
+
+    @staticmethod
+    def _get_vendor_main(mac: str, verbose=False) -> str:
+        """This will use ringmast4r and wireshark vendor database"""
+
+
+        vendor = DataBase._get_vendor(mac=mac, verbose=verbose) or False; c = 1
+
+        if not vendor: vendor = DataBase._get_vendor_new(mac=mac, verbose=verbose) or False; c = 2 
+
+        return vendor
      
 
 
