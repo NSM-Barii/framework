@@ -638,6 +638,103 @@ header {
     white-space: nowrap;
 }
 
+/* Theme Toggle */
+.theme-toggle {
+    background: var(--bg-panel);
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 5px 12px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.3s;
+    margin: 0 10px;
+}
+
+.theme-toggle:hover {
+    background: var(--border-color);
+    color: var(--bg-primary);
+    box-shadow: 0 0 15px var(--border-color);
+}
+
+/* Alert Notification */
+.alert-notification {
+    position: fixed;
+    top: -100px;
+    right: 20px;
+    background: linear-gradient(135deg, var(--immediate-zone), #ff3366);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 5px;
+    box-shadow: 0 0 30px rgba(255, 0, 64, 0.6);
+    z-index: 9999;
+    transition: top 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    border: 2px solid var(--text-secondary);
+}
+
+.alert-notification.show {
+    top: 20px;
+    animation: alertPulse 2s ease-in-out;
+}
+
+@keyframes alertPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(255, 0, 64, 0.8); }
+}
+
+.alert-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: bold;
+    font-size: 1rem;
+    letter-spacing: 1px;
+}
+
+.alert-icon {
+    font-size: 1.5rem;
+    animation: iconFlash 1s infinite;
+}
+
+@keyframes iconFlash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Light Theme */
+body.light-theme {
+    --bg-primary: #f0f0f0;
+    --bg-secondary: #ffffff;
+    --bg-panel: #fafafa;
+    --border-color: #0066cc;
+    --text-primary: #0066cc;
+    --text-secondary: #0099ff;
+    --text-muted: #666666;
+}
+
+body.light-theme::before {
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.1),
+        rgba(255, 255, 255, 0.1) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+}
+
+/* Additional Glitch Effects */
+@keyframes textGlitch {
+    0% { text-shadow: 2px 2px 0 var(--immediate-zone), -2px -2px 0 var(--text-muted); }
+    25% { text-shadow: -2px 2px 0 var(--immediate-zone), 2px -2px 0 var(--text-muted); }
+    50% { text-shadow: 2px -2px 0 var(--immediate-zone), -2px 2px 0 var(--text-muted); }
+    75% { text-shadow: -2px -2px 0 var(--immediate-zone), 2px 2px 0 var(--text-muted); }
+    100% { text-shadow: 2px 2px 0 var(--immediate-zone), -2px -2px 0 var(--text-muted); }
+}
+
+.device-count, .stat-value {
+    animation: textGlitch 5s infinite;
+}
+
 /* Responsive */
 @media (max-width: 1400px) {
     .main-grid {

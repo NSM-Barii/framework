@@ -3,15 +3,26 @@ class BLEProximityMonitor {
     constructor() {
         this.devices = new Map();
         this.signalHistory = new Map();
+        this.movementMetrics = new Map();
         this.wardrivingData = {};
-        this.maxHistoryLength = 20;
-        this.updateInterval = 1000; // 1 second
+        this.knownDevices = new Set(); // Track known devices for alerts
+        this.deviceTimeline = []; // Track device count over time
+        this.maxHistoryLength = 30;
+        this.updateInterval = 1000;
         this.currentTab = 'dashboard';
+        this.sessionStart = Date.now();
+        this.radarSweepAngle = 0;
+        this.hoveredDevice = null;
+        this.devicePositions = new Map(); // Track device positions on radar for click detection
 
         this.radarCanvas = document.getElementById('radar-canvas');
         this.radarCtx = this.radarCanvas.getContext('2d');
         this.historyCanvas = document.getElementById('history-canvas');
         this.historyCtx = this.historyCanvas.getContext('2d');
+        this.timelineCanvas = document.getElementById('timeline-canvas');
+        this.timelineCtx = this.timelineCanvas.getContext('2d');
+        this.histogramCanvas = document.getElementById('histogram-canvas');
+        this.histogramCtx = this.histogramCanvas.getContext('2d');
 
         this.selectedDevice = null;
         this.searchFilter = '';
@@ -19,6 +30,9 @@ class BLEProximityMonitor {
 
         this.initCanvas();
         this.initTabs();
+        this.initKeyboardShortcuts();
+        this.initRadarInteraction();
+        this.initThemeToggle();
         this.startMonitoring();
         this.updateTimestamp();
     }
@@ -76,8 +90,80 @@ class BLEProximityMonitor {
         // Set canvas size
         this.radarCanvas.width = 600;
         this.radarCanvas.height = 600;
-        this.historyCanvas.width = 300;
-        this.historyCanvas.height = 200;
+        this.historyCanvas.width = 280;
+        this.historyCanvas.height = 150;
+        this.timelineCanvas.width = 280;
+        this.timelineCanvas.height = 150;
+        this.histogramCanvas.width = 280;
+        this.histogramCanvas.height = 150;
+    }
+
+    initKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Only trigger if not typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+            if (e.key === '1') {
+                this.switchTab('dashboard');
+            } else if (e.key === '2') {
+                this.switchTab('wardriving');
+            }
+        });
+    }
+
+    initRadarInteraction() {
+        // Mouse move for hover detection
+        this.radarCanvas.addEventListener('mousemove', (e) => {
+            const rect = this.radarCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Check if hovering over a device
+            let foundDevice = null;
+            this.devicePositions.forEach((pos, mac) => {
+                const dist = Math.sqrt(Math.pow(x - pos.x, 2) + Math.pow(y - pos.y, 2));
+                if (dist < 10) {
+                    foundDevice = mac;
+                }
+            });
+
+            this.hoveredDevice = foundDevice;
+            this.radarCanvas.style.cursor = foundDevice ? 'pointer' : 'default';
+        });
+
+        // Click to select device
+        this.radarCanvas.addEventListener('click', (e) => {
+            const rect = this.radarCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            this.devicePositions.forEach((pos, mac) => {
+                const dist = Math.sqrt(Math.pow(x - pos.x, 2) + Math.pow(y - pos.y, 2));
+                if (dist < 10) {
+                    this.selectedDevice = mac;
+                    this.render();
+                }
+            });
+        });
+    }
+
+    initThemeToggle() {
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+        });
+    }
+
+    showNewDeviceAlert(deviceName, deviceMac) {
+        const alert = document.getElementById('alert-notification');
+        const alertText = document.getElementById('alert-text');
+
+        alertText.textContent = `New device: ${deviceName} (${deviceMac})`;
+        alert.classList.add('show');
+
+        setTimeout(() => {
+            alert.classList.remove('show');
+        }, 3000);
     }
 
     getManufacturerIcon(manufacturer) {
@@ -105,16 +191,65 @@ class BLEProximityMonitor {
 
     calculateMovementConfidence(mac) {
         const history = this.signalHistory.get(mac) || [];
-        if (history.length < 3) return 0;
+        if (history.length < 5) return 0;
 
-        // Calculate variance in RSSI values
-        const recent = history.slice(-10);
-        const mean = recent.reduce((sum, val) => sum + val, 0) / recent.length;
-        const variance = recent.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / recent.length;
+        // Use recent samples (last 15 readings)
+        const recent = history.slice(-15);
+        const n = recent.length;
 
-        // Higher variance = more movement
-        // Normalize to 0-100 scale
-        return Math.min(100, Math.round(variance * 2));
+        // 1. Calculate mean and standard deviation
+        const mean = recent.reduce((sum, val) => sum + val, 0) / n;
+        const variance = recent.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
+        const stdDev = Math.sqrt(variance);
+
+        // 2. Calculate rate of change (velocity)
+        let totalChange = 0;
+        for (let i = 1; i < recent.length; i++) {
+            totalChange += Math.abs(recent[i] - recent[i - 1]);
+        }
+        const avgChange = totalChange / (recent.length - 1);
+
+        // 3. Calculate trend (direction of movement)
+        const recentHalf = recent.slice(-5);
+        const olderHalf = recent.slice(0, 5);
+        const recentMean = recentHalf.reduce((sum, val) => sum + val, 0) / recentHalf.length;
+        const olderMean = olderHalf.reduce((sum, val) => sum + val, 0) / olderHalf.length;
+        const trendDelta = Math.abs(recentMean - olderMean);
+
+        // 4. Noise filtering - environmental variance threshold
+        const noiseThreshold = 3; // dBm - typical environmental fluctuation
+
+        // 5. Calculate movement score
+        let movementScore = 0;
+
+        // Standard deviation component (30% weight)
+        // High variance indicates movement or instability
+        movementScore += Math.min(30, stdDev * 3);
+
+        // Rate of change component (40% weight)
+        // Rapid changes indicate active movement
+        movementScore += Math.min(40, avgChange * 4);
+
+        // Trend component (30% weight)
+        // Consistent directional change indicates sustained movement
+        movementScore += Math.min(30, trendDelta * 3);
+
+        // Filter out environmental noise
+        if (stdDev < noiseThreshold && avgChange < 2) {
+            movementScore = Math.max(0, movementScore - 20);
+        }
+
+        // Store advanced metrics for display
+        this.movementMetrics.set(mac, {
+            variance: variance,
+            stdDev: stdDev,
+            avgChange: avgChange,
+            trend: recentMean - olderMean, // Positive = getting closer, negative = moving away
+            direction: recentMean > olderMean ? 'approaching' : 'leaving',
+            velocity: avgChange > 3 ? 'fast' : avgChange > 1.5 ? 'medium' : 'slow'
+        });
+
+        return Math.min(100, Math.max(0, Math.round(movementScore)));
     }
 
     updateDeviceHistory(mac, rssi) {
@@ -147,6 +282,13 @@ class BLEProximityMonitor {
             const rssi = info.rssi || -100;
             this.updateDeviceHistory(mac, rssi);
 
+            // Check for new device
+            if (!this.knownDevices.has(mac)) {
+                this.knownDevices.add(mac);
+                const deviceName = info.name || 'Unknown Device';
+                this.showNewDeviceAlert(deviceName, mac);
+            }
+
             this.devices.set(mac, {
                 mac: mac,
                 name: info.name || 'Unknown Device',
@@ -158,6 +300,17 @@ class BLEProximityMonitor {
             });
         }
 
+        // Update timeline
+        this.deviceTimeline.push({
+            time: Date.now(),
+            count: this.devices.size
+        });
+
+        // Keep only last 60 data points
+        if (this.deviceTimeline.length > 60) {
+            this.deviceTimeline.shift();
+        }
+
         this.render();
     }
 
@@ -166,9 +319,24 @@ class BLEProximityMonitor {
         this.renderRadar();
         this.renderAnalytics();
         this.renderMovementDetection();
+        this.renderTimeline();
+        this.renderHistogram();
         if (this.selectedDevice) {
             this.renderSignalHistory();
         }
+    }
+
+    updateSessionStats() {
+        // Update uptime
+        const uptime = Math.floor((Date.now() - this.sessionStart) / 1000);
+        const hours = Math.floor(uptime / 3600).toString().padStart(2, '0');
+        const minutes = Math.floor((uptime % 3600) / 60).toString().padStart(2, '0');
+        const seconds = (uptime % 60).toString().padStart(2, '0');
+        document.getElementById('uptime').textContent = `${hours}:${minutes}:${seconds}`;
+
+        // Update scan rate (devices per minute)
+        const scanRate = uptime > 0 ? Math.round((this.knownDevices.size / uptime) * 60) : 0;
+        document.getElementById('scan-rate').textContent = `${scanRate}/min`;
     }
 
     renderDeviceList() {
@@ -257,7 +425,26 @@ class BLEProximityMonitor {
         ctx.fillStyle = '#00ff41';
         ctx.fill();
 
+        // Draw radar sweep line (animated)
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(this.radarSweepAngle);
+        const gradient = ctx.createLinearGradient(0, 0, 0, -290);
+        gradient.addColorStop(0, 'rgba(0, 255, 65, 0)');
+        gradient.addColorStop(1, 'rgba(0, 255, 65, 0.3)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, 290, -Math.PI / 12, Math.PI / 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Increment sweep angle
+        this.radarSweepAngle += 0.02;
+
         // Draw devices
+        this.devicePositions.clear();
         let angle = 0;
         const angleStep = (Math.PI * 2) / Math.max(1, this.devices.size);
 
@@ -279,6 +466,9 @@ class BLEProximityMonitor {
             const x = centerX + Math.cos(angle) * radius;
             const y = centerY + Math.sin(angle) * radius;
 
+            // Store position for click detection
+            this.devicePositions.set(device.mac, { x, y, device });
+
             // Draw connecting line
             ctx.beginPath();
             ctx.moveTo(centerX, centerY);
@@ -289,11 +479,21 @@ class BLEProximityMonitor {
             ctx.stroke();
             ctx.globalAlpha = 1;
 
+            // Highlight if hovered or selected
+            const isHovered = this.hoveredDevice === device.mac;
+            const isSelected = this.selectedDevice === device.mac;
+
             // Draw device point
             ctx.beginPath();
-            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.arc(x, y, isHovered || isSelected ? 8 : 6, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
+
+            if (isSelected) {
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
 
             // Pulsing effect for moving devices
             if (device.movement > 50) {
@@ -304,6 +504,19 @@ class BLEProximityMonitor {
                 ctx.globalAlpha = 0.5;
                 ctx.stroke();
                 ctx.globalAlpha = 1;
+            }
+
+            // Draw label on hover
+            if (isHovered) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(x + 12, y - 20, 150, 40);
+                ctx.strokeStyle = color;
+                ctx.strokeRect(x + 12, y - 20, 150, 40);
+
+                ctx.fillStyle = color;
+                ctx.font = '11px "Courier New"';
+                ctx.fillText(device.name.substring(0, 18), x + 16, y - 5);
+                ctx.fillText(`${device.rssi} dBm`, x + 16, y + 10);
             }
 
             angle += angleStep;
@@ -341,21 +554,49 @@ class BLEProximityMonitor {
         sortedByMovement.forEach(device => {
             const item = document.createElement('div');
             const isMoving = device.movement > 30;
+            const metrics = this.movementMetrics.get(device.mac) || {};
+
+            // Determine status color and icon
+            let statusColor = '#00ff41'; // Green for stationary
+            let statusText = 'STATIONARY';
+            let velocityText = '';
+
+            if (device.movement > 60) {
+                statusColor = '#ff0040'; // Red for high movement
+                statusText = 'ACTIVE MOVEMENT';
+            } else if (device.movement > 30) {
+                statusColor = '#ffa500'; // Orange for moderate movement
+                statusText = 'MOVING';
+            }
+
+            // Add direction and velocity info if moving
+            if (metrics.direction && device.movement > 30) {
+                const directionIcon = metrics.direction === 'approaching' ? '→' : '←';
+                const velocityLabel = metrics.velocity === 'fast' ? 'FAST' :
+                                     metrics.velocity === 'medium' ? 'MED' : 'SLOW';
+                velocityText = `${directionIcon} ${velocityLabel} ${metrics.direction.toUpperCase()}`;
+            }
 
             item.className = `movement-item ${isMoving ? 'moving' : 'stationary'}`;
             item.innerHTML = `
                 <div class="movement-info">
                     <h4>${device.name}</h4>
                     <p>${device.mac}</p>
-                    <p style="color: ${isMoving ? '#ff0040' : '#00ff41'};">
-                        ${isMoving ? 'MOVING' : 'STATIONARY'}
+                    <p style="color: ${statusColor}; font-weight: bold;">
+                        ${statusText}
                     </p>
+                    ${velocityText ? `<p style="color: ${statusColor}; font-size: 0.8rem;">
+                        ${velocityText}
+                    </p>` : ''}
                 </div>
                 <div class="confidence-meter">
-                    <div class="confidence-value" style="color: ${isMoving ? '#ff0040' : '#00ff41'};">
+                    <div class="confidence-value" style="color: ${statusColor};">
                         ${device.movement}%
                     </div>
-                    <div class="confidence-label">CONFIDENCE</div>
+                    <div class="confidence-label">MOVEMENT</div>
+                    ${metrics.stdDev ? `<div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 5px;">
+                        σ: ${metrics.stdDev.toFixed(1)} dBm
+                    </div>` : ''}
                 </div>
             `;
             movementGrid.appendChild(item);
@@ -533,6 +774,119 @@ class BLEProximityMonitor {
         URL.revokeObjectURL(url);
     }
 
+    renderTimeline() {
+        const ctx = this.timelineCtx;
+        const width = this.timelineCanvas.width;
+        const height = this.timelineCanvas.height;
+
+        // Clear canvas
+        ctx.fillStyle = '#0f1729';
+        ctx.fillRect(0, 0, width, height);
+
+        if (this.deviceTimeline.length < 2) return;
+
+        // Draw grid
+        ctx.strokeStyle = '#1a2332';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+            const y = (height / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+            ctx.stroke();
+        }
+
+        // Find max count for scaling
+        const maxCount = Math.max(...this.deviceTimeline.map(d => d.count), 1);
+
+        // Draw line
+        ctx.beginPath();
+        ctx.strokeStyle = '#00ff41';
+        ctx.lineWidth = 2;
+
+        const stepX = width / (this.deviceTimeline.length - 1);
+
+        this.deviceTimeline.forEach((point, index) => {
+            const x = index * stepX;
+            const y = height - ((point.count / maxCount) * height * 0.9);
+
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+
+        ctx.stroke();
+
+        // Draw points
+        this.deviceTimeline.forEach((point, index) => {
+            const x = index * stepX;
+            const y = height - ((point.count / maxCount) * height * 0.9);
+
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#00ff41';
+            ctx.fill();
+        });
+    }
+
+    renderHistogram() {
+        const ctx = this.histogramCtx;
+        const width = this.histogramCanvas.width;
+        const height = this.histogramCanvas.height;
+
+        // Clear canvas
+        ctx.fillStyle = '#0f1729';
+        ctx.fillRect(0, 0, width, height);
+
+        if (this.devices.size === 0) return;
+
+        // Create RSSI bins (-100 to -30, every 10 dBm)
+        const bins = {};
+        for (let i = -100; i <= -30; i += 10) {
+            bins[i] = 0;
+        }
+
+        // Count devices in each bin
+        this.devices.forEach(device => {
+            const rssi = device.rssi;
+            const binKey = Math.floor(rssi / 10) * 10;
+            if (bins[binKey] !== undefined) {
+                bins[binKey]++;
+            }
+        });
+
+        // Find max for scaling
+        const maxBin = Math.max(...Object.values(bins), 1);
+
+        // Draw bars
+        const binCount = Object.keys(bins).length;
+        const barWidth = (width / binCount) - 4;
+
+        Object.entries(bins).forEach(([rssi, count], index) => {
+            const barHeight = (count / maxBin) * height * 0.9;
+            const x = index * (barWidth + 4);
+            const y = height - barHeight;
+
+            // Color based on RSSI range
+            let color;
+            if (parseInt(rssi) >= -50) color = '#00ff41';
+            else if (parseInt(rssi) >= -70) color = '#ffa500';
+            else color = '#ff0040';
+
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, barWidth, barHeight);
+
+            // Draw count on top if > 0
+            if (count > 0) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '9px "Courier New"';
+                ctx.fillText(count.toString(), x + barWidth / 2 - 4, y - 3);
+            }
+        });
+    }
+
     startMonitoring() {
         // Initial update
         this.updateDevices();
@@ -547,10 +901,18 @@ class BLEProximityMonitor {
             }
         }, this.updateInterval);
 
-        // Update timestamp every second
+        // Update timestamp and session stats every second
         setInterval(() => {
             this.updateTimestamp();
+            this.updateSessionStats();
         }, 1000);
+
+        // Continuous radar animation
+        setInterval(() => {
+            if (this.currentTab === 'dashboard') {
+                this.renderRadar();
+            }
+        }, 50); // 20 FPS for smooth animation
     }
 }
 

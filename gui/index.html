@@ -20,6 +20,7 @@
                     <span class="status-indicator" id="connection-status">
                         <span class="status-dot"></span> SCANNING
                     </span>
+                    <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">◐</button>
                     <span class="timestamp" id="timestamp"></span>
                 </div>
             </div>
@@ -66,6 +67,14 @@
                         <div class="stat-value" id="total-devices">0</div>
                     </div>
                     <div class="stat-box">
+                        <div class="stat-label">SESSION UPTIME</div>
+                        <div class="stat-value" id="uptime" style="font-size: 1.5rem;">00:00:00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">SCAN RATE</div>
+                        <div class="stat-value" id="scan-rate">0</div>
+                    </div>
+                    <div class="stat-box">
                         <div class="stat-label">IMMEDIATE ZONE</div>
                         <div class="stat-value immediate-color" id="immediate-count">0</div>
                     </div>
@@ -79,7 +88,17 @@
                     </div>
 
                     <div class="signal-strength-chart" id="signal-chart">
-                        <h3>SIGNAL STRENGTH HISTORY</h3>
+                        <h3>DEVICE TIMELINE</h3>
+                        <canvas id="timeline-canvas"></canvas>
+                    </div>
+
+                    <div class="signal-strength-chart" id="histogram-chart">
+                        <h3>RSSI DISTRIBUTION</h3>
+                        <canvas id="histogram-canvas"></canvas>
+                    </div>
+
+                    <div class="signal-strength-chart" id="signal-chart-selected">
+                        <h3>SIGNAL HISTORY (CLICK DEVICE)</h3>
                         <canvas id="history-canvas"></canvas>
                     </div>
                 </div>
@@ -135,6 +154,14 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- New Device Alert Notification -->
+    <div class="alert-notification" id="alert-notification">
+        <div class="alert-content">
+            <span class="alert-icon">⚡</span>
+            <span class="alert-text" id="alert-text">New device detected!</span>
         </div>
     </div>
 
