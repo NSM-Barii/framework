@@ -154,16 +154,64 @@ class BLEProximityMonitor {
         });
     }
 
-    showNewDeviceAlert(deviceName, deviceMac) {
-        const alert = document.getElementById('alert-notification');
-        const alertText = document.getElementById('alert-text');
+    showDeviceTooltip(event, device) {
+        // Create or get tooltip element
+        let tooltip = document.getElementById('device-tooltip');
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.id = 'device-tooltip';
+            tooltip.className = 'device-tooltip';
+            document.body.appendChild(tooltip);
+        }
 
-        alertText.textContent = `New device: ${deviceName} (${deviceMac})`;
-        alert.classList.add('show');
+        const metrics = this.movementMetrics.get(device.mac) || {};
 
-        setTimeout(() => {
-            alert.classList.remove('show');
-        }, 3000);
+        tooltip.innerHTML = `
+            <div class="tooltip-header">${device.name}</div>
+            <div class="tooltip-row">
+                <span class="tooltip-label">MAC:</span>
+                <span class="tooltip-value">${device.mac}</span>
+            </div>
+            <div class="tooltip-row">
+                <span class="tooltip-label">Manufacturer:</span>
+                <span class="tooltip-value">${device.manufacturer || 'Unknown'}</span>
+            </div>
+            <div class="tooltip-row">
+                <span class="tooltip-label">RSSI:</span>
+                <span class="tooltip-value">${device.rssi} dBm</span>
+            </div>
+            <div class="tooltip-row">
+                <span class="tooltip-label">Proximity:</span>
+                <span class="tooltip-value">${device.proximity.toUpperCase()}</span>
+            </div>
+            <div class="tooltip-row">
+                <span class="tooltip-label">Movement:</span>
+                <span class="tooltip-value">${device.movement}%</span>
+            </div>
+            ${metrics.direction ? `
+            <div class="tooltip-row">
+                <span class="tooltip-label">Direction:</span>
+                <span class="tooltip-value">${metrics.direction.toUpperCase()}</span>
+            </div>` : ''}
+            ${metrics.velocity ? `
+            <div class="tooltip-row">
+                <span class="tooltip-label">Velocity:</span>
+                <span class="tooltip-value">${metrics.velocity.toUpperCase()}</span>
+            </div>` : ''}
+        `;
+
+        tooltip.classList.add('show');
+
+        // Position tooltip near cursor
+        tooltip.style.left = (event.pageX + 15) + 'px';
+        tooltip.style.top = (event.pageY + 15) + 'px';
+    }
+
+    hideDeviceTooltip() {
+        const tooltip = document.getElementById('device-tooltip');
+        if (tooltip) {
+            tooltip.classList.remove('show');
+        }
     }
 
     getManufacturerIcon(manufacturer) {
@@ -282,11 +330,9 @@ class BLEProximityMonitor {
             const rssi = info.rssi || -100;
             this.updateDeviceHistory(mac, rssi);
 
-            // Check for new device
+            // Track known devices
             if (!this.knownDevices.has(mac)) {
                 this.knownDevices.add(mac);
-                const deviceName = info.name || 'Unknown Device';
-                this.showNewDeviceAlert(deviceName, mac);
             }
 
             this.devices.set(mac, {
@@ -385,6 +431,15 @@ class BLEProximityMonitor {
             item.addEventListener('click', () => {
                 this.selectedDevice = device.mac;
                 this.render();
+            });
+
+            // Add hover tooltip
+            item.addEventListener('mouseenter', (e) => {
+                this.showDeviceTooltip(e, device);
+            });
+
+            item.addEventListener('mouseleave', () => {
+                this.hideDeviceTooltip();
             });
 
             deviceList.appendChild(item);
@@ -756,6 +811,23 @@ class BLEProximityMonitor {
                 <td>${device.name || 'Unknown'}</td>
                 <td class="uuid-list" title="${uuidStr}">${uuidStr}</td>
             `;
+
+            // Add hover tooltip to wardriving table
+            row.addEventListener('mouseenter', (e) => {
+                const wardrivingDevice = {
+                    name: device.name || 'Unknown',
+                    mac: device.addr,
+                    manufacturer: device.manuf || device.vendor || 'Unknown',
+                    rssi: rssi,
+                    proximity: rssi >= -50 ? 'immediate' : rssi >= -70 ? 'near' : 'far',
+                    movement: 0
+                };
+                this.showDeviceTooltip(e, wardrivingDevice);
+            });
+
+            row.addEventListener('mouseleave', () => {
+                this.hideDeviceTooltip();
+            });
 
             tbody.appendChild(row);
         });

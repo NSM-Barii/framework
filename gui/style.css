@@ -657,48 +657,48 @@ header {
     box-shadow: 0 0 15px var(--border-color);
 }
 
-/* Alert Notification */
-.alert-notification {
+/* Device Info Tooltip */
+.device-tooltip {
     position: fixed;
-    top: -100px;
-    right: 20px;
-    background: linear-gradient(135deg, var(--immediate-zone), #ff3366);
-    color: white;
-    padding: 15px 25px;
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid var(--border-color);
+    padding: 15px;
     border-radius: 5px;
-    box-shadow: 0 0 30px rgba(255, 0, 64, 0.6);
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
     z-index: 9999;
-    transition: top 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    border: 2px solid var(--text-secondary);
+    pointer-events: none;
+    max-width: 300px;
+    font-size: 0.85rem;
+    display: none;
 }
 
-.alert-notification.show {
-    top: 20px;
-    animation: alertPulse 2s ease-in-out;
+.device-tooltip.show {
+    display: block;
 }
 
-@keyframes alertPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(255, 0, 64, 0.8); }
-}
-
-.alert-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.tooltip-header {
     font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 8px;
     font-size: 1rem;
-    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
 }
 
-.alert-icon {
-    font-size: 1.5rem;
-    animation: iconFlash 1s infinite;
+.tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 5px 0;
+    color: var(--text-muted);
 }
 
-@keyframes iconFlash {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+.tooltip-label {
+    color: var(--text-secondary);
+    font-weight: bold;
+}
+
+.tooltip-value {
+    color: var(--text-primary);
 }
 
 /* Light Theme */
@@ -722,18 +722,7 @@ body.light-theme::before {
     );
 }
 
-/* Additional Glitch Effects */
-@keyframes textGlitch {
-    0% { text-shadow: 2px 2px 0 var(--immediate-zone), -2px -2px 0 var(--text-muted); }
-    25% { text-shadow: -2px 2px 0 var(--immediate-zone), 2px -2px 0 var(--text-muted); }
-    50% { text-shadow: 2px -2px 0 var(--immediate-zone), -2px 2px 0 var(--text-muted); }
-    75% { text-shadow: -2px -2px 0 var(--immediate-zone), 2px 2px 0 var(--text-muted); }
-    100% { text-shadow: 2px 2px 0 var(--immediate-zone), -2px -2px 0 var(--text-muted); }
-}
-
-.device-count, .stat-value {
-    animation: textGlitch 5s infinite;
-}
+/* Remove glitch effects from stats */
 
 /* Responsive */
 @media (max-width: 1400px) {
