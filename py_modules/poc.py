@@ -23,6 +23,7 @@ async def toggle_plug():
         for crc in range(256):
             payload = bytes.fromhex("02012E0500010004") + bytes([crc])
             await client.write_gatt_char(WRITE_UUID, payload, response=True)
+            print(f"sent: {payload}")
     except Exception as e:
         print(f"[-] Failed to write: {e}")
 

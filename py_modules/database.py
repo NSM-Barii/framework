@@ -8,7 +8,7 @@ console = Console()
 
 
 # IMPORTS
-import manuf, json
+import manuf, json, os
 from pathlib import Path
 from mac_vendor_lookup import MacLookup #vendors = MacLookup().load_vendors()
 
@@ -129,7 +129,11 @@ class DataBase():
                 "likelihood": "Low"
             }
         ]
-    
+        
+
+        return services
+
+
 
     @staticmethod
     def _etcs() -> str:
@@ -172,12 +176,10 @@ class DataBase():
 
                         if verbose: CONSOLE.print(f"[bold green][+] Mapped service:[bold yellow] uuid <--> {service} ")
 
-                        return service
-            
+                        return service           
 
             return False
         
-
 
         else:
             
@@ -186,14 +188,10 @@ class DataBase():
                 if uuid == service: 
                     if verbose: CONSOLE.print(f"[bold green][+] Mapped service:[bold yellow] uuid <--> {service} ")
 
-                    return service
-            
+                    return service        
 
             return False
 
-
-
-        
 
 
     @classmethod
@@ -317,10 +315,40 @@ class DataBase():
 
         return vendor
      
+    
 
+    @classmethod
+    def push_results(cls, data:any, verbose=True) -> None:
+        """This will save ble wardriving results"""
+      
+        try:
+            NAME = "ble"
+            USER_HOME = Path(os.getenv("SUDO_USER") and f"/home/{os.getenv('SUDO_USER')}") or Path.home()
+            BASE_DIR = USER_HOME / "Documents" / "nsm_tools" / ".data" / f"{NAME}"
+        except Exception as e:
+            BASE_DIR = Path.home() / "Documents" / "nsm_tools" / ".data" / f"{NAME}"
+        
+        try:
+            if not BASE_DIR.exists(): BASE_DIR.mkdir(parents=True, exist_ok=True); console.print(f"[+] Successfully made file path: {BASE_DIR}")
+
+            drive = BASE_DIR / "war_drive.json"
+
+            with open(drive, "r") as file: old_data = json.load(file); num = 0
+
+            #for key, value in old_data.items(): num = int(key) 
+            #for key, value in data.items(): num +=1; data[num] = value 
+
+            with open(drive, "w") as file: json.dump(data, file, indent=4)
+            if verbose: console.print("[bold green][+] Wardrive pushed!")
+        
+
+        except Exception as e:
+            console.print(f"[bold red][!] Exception Error:[bold yellow] {e}")
 
 
 
 if __name__ == "__main__":
+    ass = {}
+    DataBase.push_results(data=ass)
     DataBase._new_get_vendor(mac="")
   #  DataBase._get_manufacturers(manufacturer_hex=2000, verbose=True)

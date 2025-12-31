@@ -54,7 +54,7 @@ class BLE_Sniffer():
 
 
     @classmethod
-    def _ble_printer(cls, timeout, vendor_lookup):
+    def _ble_printer(cls, timeout, vendor_lookup, war_drive: bool) -> None:
         """Lets enumerate"""
 
 
@@ -74,8 +74,11 @@ class BLE_Sniffer():
                 while 0 < timeout:
 
                     devices = asyncio.run(BLE_Sniffer._ble_discover()); timeout -= 2
-                    
+
                     if not devices: return
+                    elif war_drive: table.title = f"BLE Driving"
+                      
+
 
                     
                     
@@ -88,20 +91,23 @@ class BLE_Sniffer():
                             rssi  = adv.rssi
                             uuid  = adv.service_uuids or False
                             manuf = DataBase._get_manufacturers(manufacturer_hex=adv.manufacturer_data, verbose=False) 
-                            if vendor_lookup: vendor = DataBase._get_vendor_main(mac=mac, verbose=False) 
+                            vendor = DataBase._get_vendor_main(mac=mac, verbose=False) if vendor_lookup else  False 
                             #if vendor_lookup: vendor = DataBase._get_vendor(mac=mac, verbose=False) 
 
 
                             data = {
-                                "addr": mac,
                                 "rssi": rssi,
-                                "name": name,
+                                "addr": mac,
                                 "manuf": manuf,
                                 "vendor": vendor,
+                                "name": name,
                                 "uuid": uuid
                             }
 
+
                             cls.devices.append(mac)
+                            cls.war_drive[len(cls.devices)] = data
+
 
 
                             p1 = c3; p2 = "white" 
@@ -115,23 +121,28 @@ class BLE_Sniffer():
             console.print(f"\n[bold green][+] Found a total of:[bold yellow] {len(cls.devices)} devices")
 
 
-        except KeyboardInterrupt: return KeyboardInterrupt
+        except KeyboardInterrupt:  
+            if war_drive: DataBase.push_results(data=cls.war_drive, verbose=False)
+            return KeyboardInterrupt
 
-        except Exception as e: console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}")
+        except Exception as e: console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}") 
+        if war_drive: DataBase.push_results(data=cls.war_drive, verbose=False)
 
 
 
         
     @classmethod
-    def main(cls, timeout, vendor_lookup):
+    def main(cls, timeout, vendor_lookup, war_drive):
         """Run from here"""
-
+        
+        cls.war_drive = {}
         cls.devices = []
+        if war_drive: timeout = 30 * 60; vendor_lookup = True
 
 
         try:
 
-            BLE_Sniffer._ble_printer(timeout=timeout, vendor_lookup=vendor_lookup)
+            BLE_Sniffer._ble_printer(timeout=timeout, vendor_lookup=vendor_lookup, war_drive=war_drive)
         
 
         
@@ -339,6 +350,7 @@ class BLE_Fuzzer():
         t = 100000000
 
         payloads = [
+            b'\x01\xA0',
             b'\x01\x01',
             b'\x01\xFF',
             b'\xA0\x01',
@@ -409,9 +421,9 @@ class BLE_Fuzzer():
                     for id in valid_uuids:
                         for payload in payloads:
                         
-                            payload = os.urandom(random.randint(1,70))
+                            payload = os.urandom(random.randint(1,30))
                             await client.write_gatt_char(char_specifier=str(id).strip(), data=payload, response=response); t -= 1
-                            console.print(f"[bold red][*] Fuzzing:[cyan] {payload.hex()}")
+                            console.print(f"[bold red][*] Fuzzing:[cyan] {payload}")
                 
                         #await asyncio.sleep(1)
 
