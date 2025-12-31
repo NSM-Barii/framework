@@ -122,11 +122,11 @@ class BLE_Sniffer():
 
 
         except KeyboardInterrupt:  
-            if war_drive: DataBase.push_results(data=cls.war_drive, verbose=False)
+            if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
             return KeyboardInterrupt
 
         except Exception as e: console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}") 
-        if war_drive: DataBase.push_results(data=cls.war_drive, verbose=False)
+        if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
 
 
 
