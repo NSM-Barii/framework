@@ -1,0 +1,68 @@
+
+HOW TO FLASH A NEW ANDROID BUILD USING THE ANDROID WEB FLASHER
+===============================================================
+
+This guide will walk you through installing a clean Android build using the official
+Android Web Flashing Tool. This process works for Pixel devices and requires a computer
+with Google Chrome or Microsoft Edge.
+
+REQUIREMENTS:
+-------------
+- A supported Android device (Pixel recommended)
+- OEM Unlocking enabled in Developer Options
+- Bootloader already unlocked
+- USB cable for data transfer
+- Chrome or Edge browser on your computer
+
+STEP 1: Open the Web Flasher
+----------------------------
+1. On your computer, open this URL in Chrome or Edge:
+   https://flash.android.com
+
+2. Click "Get Started"
+
+3. Allow the site to access ADB if prompted.
+
+STEP 2: Connect Your Device
+---------------------------
+1. Put your phone into bootloader mode:
+   You can use ADB:
+   adb reboot bootloader
+
+2. On the Web Flasher, click “Add new device”
+3. Select your device from the list, then click "Connect"
+
+STEP 3: Choose Your Build
+-------------------------
+1. Once your device is connected, click "Select a build"
+2. Choose the latest public or beta build available for your device
+3. Make sure the selected build matches your device model
+
+STEP 4: Enable Advanced Options (IMPORTANT)
+-------------------------------------------
+Click “More options” to expand advanced settings:
+
+- UNCHECK "Lock bootloader after installation" (IMPORTANT if you plan to root later)
+- (Optional) CHECK "Force Flash All Partitions" for a clean install
+- Keep "Wipe" checked if you want a fresh reset
+
+STEP 5: Begin Flashing
+----------------------
+Click “Install Build” and let the process complete.
+
+- Do not unplug your phone
+- The process may take several minutes
+- Your phone will automatically reboot after flashing
+
+STEP 6: Setup After Flash
+-------------------------
+- Complete Android setup
+- Re-enable Developer Options and USB Debugging
+- You're now ready to root or use your device as-is
+
+NOTES:
+------
+- Flashing a new build will erase all data unless you explicitly uncheck the wipe option.
+- Use the web flasher only with a fully charged battery and reliable USB connection.
+- If anything fails, restart both your phone and browser, and retry.
+

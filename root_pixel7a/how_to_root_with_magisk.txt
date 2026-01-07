@@ -1,0 +1,82 @@
+
+HOW TO ROOT AN ANDROID DEVICE USING MAGISK
+==========================================
+
+This guide explains how to root your Android device using Magisk,
+including cases where your device uses 'init_boot.img' instead of 'boot.img'.
+
+REQUIREMENTS:
+- ADB and Fastboot installed
+- Bootloader unlocked
+- USB Debugging and OEM Unlock enabled
+
+STEP 1: Download Factory Image
+------------------------------
+- Go to: https://developers.google.com/android/images
+- Find your device and download the image that matches your build number
+- Extract the zip file
+
+STEP 2: Identify Which Image to Patch
+-------------------------------------
+IMPORTANT:
+- If your factory image has 'init_boot.img', USE THAT — even if 'boot.img' is also present.
+- Only if there is NO 'init_boot.img' should you use 'boot.img'.
+- Only patch one. Do NOT patch both.
+
+STEP 3: Patch the Image with Magisk
+-----------------------------------
+1. Transfer the correct image to your phone:
+   adb push init_boot.img /sdcard/Download/
+   or
+   adb push boot.img /sdcard/Download/
+
+2. Install the Magisk APK from:
+   https://github.com/topjohnwu/Magisk/releases
+
+3. Open Magisk on your phone:
+   - Tap Install
+   - Tap "Select and Patch a File"
+   - Choose the image you pushed
+
+4. Magisk will create a new file in your Downloads folder:
+   /sdcard/Download/magisk_patched-XXXXX.img
+
+5. Pull the patched image back to your PC:
+   adb pull /sdcard/Download/magisk_patched-XXXXX.img
+
+STEP 4: Flash the Patched Image
+-------------------------------
+1. Reboot to bootloader:
+   adb reboot bootloader
+
+2. Flash the image:
+
+   If you patched init_boot.img:
+       fastboot flash init_boot magisk_patched.img
+
+   If you patched boot.img:
+       fastboot flash boot magisk_patched.img
+
+3. Reboot the phone:
+   fastboot reboot
+
+STEP 5: Confirm Root Access
+---------------------------
+1. Open the Magisk app and confirm it says "Installed"
+2. In terminal on your PC:
+   adb shell
+   su
+   whoami
+
+   If you see "root" — you are successfully rooted.
+
+NOTES:
+------
+- If 'su' is not found, you likely flashed the wrong image or Magisk failed to patch it.
+- Do not try to flash both boot.img and init_boot.img.
+- Most newer Android 13+ devices (e.g. Pixel 7, Pixel 8) use init_boot.img for rooting.
+
+FULL VIDEO WALKTHROUGH (RECOMMENDED):
+-------------------------------------
+This video will clear up any confusion and walks through the process from start to finish:
+https://www.youtube.com/watch?v=j1uR-rw60-E

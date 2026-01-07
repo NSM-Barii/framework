@@ -1,0 +1,77 @@
+
+HOW TO INSTALL AND USE FRIDA (ANDROID + PC)
+============================================
+
+This guide walks you through installing Frida on your PC and setting up Frida Server on your rooted Android device.
+
+REQUIREMENTS:
+-------------
+- Rooted Android device
+- Magisk installed
+- ADB and Fastboot installed on your PC
+- Python installed on your PC
+
+STEP 1: Install Frida on Your PC
+--------------------------------
+1. Make sure Python and pip are installed.
+
+2. python -m venv venv; source venv/bin/activate
+
+3. Install Frida via pip:
+   pip install frida-tools
+
+4. Verify installation:
+   frida --version
+
+STEP 2: Download the Correct Frida Server
+-----------------------------------------
+1. Go to the official Frida releases page:
+   https://github.com/frida/frida/releases
+
+2. Download the file:
+   frida-server-<version>-android-arm64.xz
+
+   Example:
+   frida-server-17.2.1-android-arm64.xz
+
+   Make sure the version matches your PC's frida version.
+
+3. Extract it:
+   unxz frida-server-17.2.1-android-arm64.xz
+
+STEP 3: Push Frida Server to Your Device
+----------------------------------------
+1. Connect your phone and run:
+   adb push frida-server-17.2.1-android-arm64 /data/local/tmp/frida-server
+
+2. Set permissions and start the server:
+   adb shell
+   su
+   chmod 755 /data/local/tmp/frida-server
+   /data/local/tmp/frida-server &
+
+STEP 4: Confirm Frida is Working
+--------------------------------
+On your PC, run:
+   frida-ps -U
+
+If you see a list of running processes, Frida is working.
+
+STEP 5: Attach to an App or Inject a Script
+-------------------------------------------
+To attach to a running app:
+   frida -U -n com.example.app
+
+To start an app with Frida:
+   frida -U -f com.example.app
+
+To inject a script (e.g., for SSL pinning bypass):
+   frida -U -n com.example.app -l bypass.js --no-pause
+
+NOTES:
+------
+- You must run frida-server as root for it to work
+- If it fails to bind or attach, reboot your device and try again
+- Scripts can be found online or written using Frida’s API
+
+You now have full runtime control of Android apps — ready for testing, reversing, or debugging.

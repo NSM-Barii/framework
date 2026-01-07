@@ -1,0 +1,33 @@
+
+HOW TO ENABLE OEM UNLOCK AND USB DEBUGGING ON ANDROID
+======================================================
+
+1. Enable Developer Options
+---------------------------
+- Open the **Settings** app on your Android device.
+- Scroll down and tap **About phone**.
+- Find the **Build number** entry.
+- Tap **Build number** 7 times. You may be asked to enter your device PIN/password.
+- You should see a message: "You are now a developer!"
+
+2. Enable OEM Unlocking
+------------------------
+- Go back to the **main Settings** menu.
+- Tap **System** > **Developer options** (or just **Developer options**, depending on the Android version).
+- Find and enable **OEM unlocking**.
+- Confirm when prompted. This allows the bootloader to be unlocked.
+
+**Note:** Enabling OEM Unlocking does *not* unlock the bootloader. It just *permits* it.
+
+3. Enable USB Debugging
+------------------------
+- In the same **Developer options** menu, find and enable **USB debugging**.
+- Confirm the prompt.
+
+4. Trust the Debugging Host (Your PC)
+-------------------------------------
+- Connect your phone to your computer via USB.
+- On your phone, a prompt should appear: **"Allow USB debugging?"**
+- Check **Always allow from this computer** and tap **Allow**.
+
+You’re now ready to use ADB and fastboot commands with your device.

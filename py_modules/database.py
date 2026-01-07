@@ -220,7 +220,7 @@ class DataBase():
 
         data = {}
         for key, value in manufacturer_hex.items():
-            id = key; data = DataBase._get_etc(data=value.hex())
+            id = key; data = DataBase._get_etc(data=value.hex()) or value.hex()
             
 
         company_ids = DataBase._importer(file_path=cls.company_ids_path, verbose=False)

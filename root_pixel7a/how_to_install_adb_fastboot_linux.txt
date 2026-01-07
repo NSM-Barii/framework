@@ -1,0 +1,60 @@
+
+# How to Install ADB and Fastboot Tools (Linux Only - Command Line)
+
+ADB (Android Debug Bridge) and Fastboot are essential command-line tools to interface with your Android device. Here's how to install them directly via terminal on Linux.
+
+---
+
+## ✅ Install via Package Manager (Debian/Ubuntu-based systems)
+
+1. Open a terminal.
+
+2. Run the following command:
+   ```
+   sudo apt update && sudo apt install android-tools-adb android-tools-fastboot -y
+   ```
+
+3. Verify installation:
+   ```
+   adb version
+   fastboot version
+   ```
+
+---
+
+## ✅ Arch Linux / Manjaro
+
+```
+sudo pacman -S android-tools
+```
+
+---
+
+## ✅ Fedora / RHEL
+
+```
+sudo dnf install android-tools
+```
+
+---
+
+## ✅ Common Post-Install Steps
+
+- Enable USB debugging on your Android device.
+- Connect your device via USB and run:
+  ```
+  adb devices
+  ```
+  You should see your device listed. If prompted on your phone, accept the USB debugging dialog.
+
+- To reboot into bootloader:
+  ```
+  adb reboot bootloader
+  ```
+
+- To check fastboot connection:
+  ```
+  fastboot devices
+  ```
+
+Once you're connected, you're ready to move on to unlocking the bootloader or rooting your device.

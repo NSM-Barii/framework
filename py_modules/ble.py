@@ -108,7 +108,7 @@ class BLE_Sniffer():
 
                         if mac not in cls.devices:
                             
-                            cls.devices.append(mac)
+                            cls.devices.append(mac); cls.num += 1
                             cls.war_drive[len(cls.devices)] = data
                            
                             if uuid: table.add_section()
@@ -122,8 +122,16 @@ class BLE_Sniffer():
 
 
                             #if vendor_lookup:  console.print(f"[{c2}][+][/{c2}] [{p1}]Addr:[{p2}] {mac} - [{p1}]RSSI:[{p2}] {rssi} - [{p1}]Local_name:[{p2}] {name} - [{p1}]Manufacturer:[{p2}] {manuf} - [{p1}]UUID:[{p2}] {uuid}") 
-                            #else: console.print(f"[{c2}][+][/{c2}] [{p1}]Addr:[{p2}] {mac} - [{p1}]RSSI:[{p2}] {rssi} - [{p1}]Local_name:[{p2}] {name} - [{p1}]Manufacturer:[{p2}] {manuf} - [{p1}]UUID:[{p2}] {uuid}")
+                            #else: console.print(f"[{c2wq   }][+][/{c2}] [{p1}]Addr:[{p2}] {mac} - [{p1}]RSSI:[{p2}] {rssi} - [{p1}]Local_name:[{p2}] {name} - [{p1}]Manufacturer:[{p2}] {manuf} - [{p1}]UUID:[{p2}] {uuid}")
                         
+
+                        if cls.num > 50:
+                            cls.num = 0
+                            console.print(table)
+                            table = Table(title="BLE Sniffer", title_style="bold red", border_style="bold purple", style="bold purple", header_style="bold red")
+                            if vendor_lookup: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer"); table.add_column("vendor", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
+                            else: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
+
 
 
 
@@ -149,6 +157,7 @@ class BLE_Sniffer():
         cls.war_drive = {}
         cls.devices = []
         cls.live_map = {}
+        cls.num =0
         if war_drive: timeout = 30 * 60; vendor_lookup = True
 
 
@@ -161,9 +170,12 @@ class BLE_Sniffer():
         
         except KeyboardInterrupt:
             console.print("\n[bold red]Stopping....")
+            if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
         
         except Exception as e:
             console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}")
+            if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
+
             
 
 class BLE_Enumerater():
