@@ -61,7 +61,7 @@ class Web_Server():
 
 
     @staticmethod
-    def start(address:str="0.0.0.0", port:int=8000) -> None:
+    def start(CONSOLE, address:str="0.0.0.0", port:int=8000) -> None:
         """This method will start the web server"""
 
         gui_path = str(Path(__file__).parent.parent / "gui" )
@@ -69,7 +69,8 @@ class Web_Server():
 
         server = HTTPServer(server_address=(address,port), RequestHandlerClass=HTTP_Handler) 
         
-        console.print(f"[+] Successfully Launched web server")
+        CONSOLE.print(f"[bold green][+] Successfully Launched web server")
+        CONSOLE.print(f"[bold green][+] Starting Web_Server on:[bold yellow] http://localhost:{port}")
         server.serve_forever(poll_interval=2)
     
 

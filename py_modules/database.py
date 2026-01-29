@@ -135,7 +135,6 @@ class DataBase():
         return services
 
 
-
     @staticmethod
     def _etcs() -> str:
         """Hold data"""
@@ -156,7 +155,6 @@ class DataBase():
 
 
         pass
-    
     
 
     @classmethod
@@ -321,46 +319,50 @@ class DataBase():
     @classmethod
     def push_results(cls, devices:any, verbose=True) -> None:
         """This will save ble wardriving results"""
-
-        data = devices
         
-      
-        try:
-            NAME = "ble"
-            USER_HOME = Path(os.getenv("SUDO_USER") and f"/home/{os.getenv('SUDO_USER')}") or Path.home()
-            BASE_DIR = USER_HOME / "Documents" / "nsm_tools" / ".data" / f"{NAME}"
 
-        except Exception as e:
-            BASE_DIR = Path.home() / "Documents" / "nsm_tools" / ".data" / f"{NAME}"
-        
-        BASE_DIR.mkdir(exist_ok=True, parents=True)
-        
-        try:
-            if not BASE_DIR.exists(): BASE_DIR.mkdir(parents=True, exist_ok=True); console.print(f"[+] Successfully made file path: {BASE_DIR}")
+        with LOCK:
 
-            drive = BASE_DIR / "war_drive.json"
-   
-   
-            if drive.exists():
-
-                with open(drive, "r") as file: data = json.load(file); num = 0; macs = []
-
-                for _, value in data.items(): macs.append(value["addr"]); num+=1
-
-                for _, device in devices.items(): 
-
-                    if device["addr"] not in macs:
-
-                        num += 1; mac = value["addr"]; macs.append(mac); data[num] = value
-
-
-            with open(drive, "w") as file: json.dump(data, file, indent=4)
-            if verbose: console.print("[bold green][+] Wardrive pushed!")
-            console.print(data)
+            data_new = devices
             
+        
+            try:
+                NAME = "ble"
+                USER_HOME = Path(os.getenv("SUDO_USER") and f"/home/{os.getenv('SUDO_USER')}") or Path.home()
+                BASE_DIR = USER_HOME / "Documents" / "nsm_tools" / ".data" / f"{NAME}"
+
+            except Exception as e:
+                BASE_DIR = Path.home() / "Documents" / "nsm_tools" / ".data" / f"{NAME}"
             
-        except Exception as e:
-            console.print(f"[bold red][!] Exception Error:[bold yellow] {e}")
+            BASE_DIR.mkdir(exist_ok=True, parents=True)
+            
+            try:
+                if not BASE_DIR.exists(): BASE_DIR.mkdir(parents=True, exist_ok=True); console.print(f"[+] Successfully made file path: {BASE_DIR}")
+
+                drive = BASE_DIR / "war_drive.json"
+    
+    
+                if drive.exists():
+
+                    with open(drive, "r") as file: data = json.load(file); num = 0; macs = []
+
+                    for _, value in data.items(): macs.append(value["addr"]); num+=1
+
+                    for _, device in devices.items(): 
+
+                        if device["addr"] not in macs:
+
+                            num += 1; mac = value["addr"]; macs.append(mac); data[num] = value
+                            console.print(mac)
+                
+
+                with open(drive, "w") as file: json.dump(data, file, indent=4)
+                if verbose: console.print("[bold green][+] Wardrive pushed!")
+                console.print(data)
+                
+                
+            except Exception as e:
+                console.print(f"[bold red][!] Exception Error:[bold yellow] {e}")
 
 
 

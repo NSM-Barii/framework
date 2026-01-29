@@ -75,3 +75,7 @@ NOTES:
 - Scripts can be found online or written using Frida’s API
 
 You now have full runtime control of Android apps — ready for testing, reversing, or debugging.
+
+
+YOUTUBE VIDEO FOR BETTER EXPLANATION
+https://www.youtube.com/watch?v=VixUGTXVx-U&t=577s

@@ -29,6 +29,9 @@ class Main_Menu():
 
    # parser.add_argument("-h", help="Display help, usage info, and project banner")
     parser.add_argument("-w", action="store_true", help="BLE Wardriving along with automatic data saving")
+    parser.add_argument("-wv", action="store_true", help="BLE Wardriivng with command output")
+
+
     parser.add_argument("-s", action="store_true", help="Perform a local ble scan")
     parser.add_argument("-sv", action="store_true", help="Lookup info on MAC Addr, such as vendor")
 
@@ -48,9 +51,13 @@ class Main_Menu():
 
 
     args = parser.parse_args()
+    
+
+    # WAR DRIVING
+    war   = args.w
+    war_v = args.wv
 
     # SCANNING
-    war  = args.w
     scan = args.s 
     time = args.t 
     vendor = args.sv
@@ -74,8 +81,8 @@ class Main_Menu():
 
 
 
-    if scan or vendor or war: 
-        BLE_Sniffer.main(timeout=int(time), vendor_lookup=vendor, war_drive=war); exit()
+    if scan or vendor or war or war_v: 
+        BLE_Sniffer.main(timeout=int(time), vendor_lookup=vendor, war_drive=war, print=war_v); exit()
 
 
     if not mac: console.print(f"[bold red]use -m to pass a MAC Addr silly goose..."); exit()

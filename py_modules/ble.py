@@ -21,7 +21,7 @@ from database import DataBase
 
 
 console = Console()
-
+LOCK = threading.Lock
 
 
 class BLE_Sniffer(): 
@@ -55,7 +55,7 @@ class BLE_Sniffer():
 
 
     @classmethod
-    def _ble_printer(cls, timeout, vendor_lookup, war_drive: bool) -> None:
+    def _ble_printer(cls, timeout, vendor_lookup, war_drive: bool, print: bool = True) -> None:
         """Lets enumerate"""
 
 
@@ -64,9 +64,12 @@ class BLE_Sniffer():
         c3 = "bold green"
         c4 = "bold red"
         c5 = "bold blue"
-        table = Table(title="BLE Sniffer", title_style="bold red", border_style="bold purple", style="bold purple", header_style="bold red")
-        if vendor_lookup: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer"); table.add_column("vendor", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
-        else: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
+        table = ""
+
+        if print:
+            table = Table(title="BLE Sniffer" if not war_drive else "BLE Driving", title_style="bold red", border_style="bold purple", style="bold purple", header_style="bold red")
+            if vendor_lookup: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer"); table.add_column("vendor", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
+            else: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
 
 
         try:
@@ -76,16 +79,11 @@ class BLE_Sniffer():
 
                     devices = asyncio.run(BLE_Sniffer._ble_discover()); timeout -= 2
 
+
                     if not devices: return
-                    elif war_drive: table.title = f"BLE Driving"
-                      
-
-
                     
                     
                     for mac, (device, adv) in devices.items():
-
-
 
                         name  = adv.local_name or False
                         rssi  = adv.rssi
@@ -110,29 +108,31 @@ class BLE_Sniffer():
                             
                             cls.devices.append(mac); cls.num += 1
                             cls.war_drive[len(cls.devices)] = data
-                           
-                            if uuid: table.add_section()
+                            
+                            if print:
+                                if uuid: table.add_section()
+                            
+                                p1 = c3; p2 = "white" 
+                                if vendor_lookup: table.add_row(f"{len(cls.devices)}", f"{rssi}", f"{mac}", f"{manuf}", f"{vendor}", f"{name}",  f"{uuid}")
+                                else:             table.add_row(f"{len(cls.devices)}", f"{rssi}", f"{mac}", f"{manuf}", f"{name}",   f"{uuid}")
 
-                            p1 = c3; p2 = "white" 
-                            if vendor_lookup: table.add_row(f"{len(cls.devices)}", f"{rssi}", f"{mac}", f"{manuf}", f"{vendor}", f"{name}",  f"{uuid}")
-                            else:             table.add_row(f"{len(cls.devices)}", f"{rssi}", f"{mac}", f"{manuf}", f"{name}",   f"{uuid}")
-
-                            if uuid: table.add_section()
-            
+                                if uuid: table.add_section()
+                
 
 
                             #if vendor_lookup:  console.print(f"[{c2}][+][/{c2}] [{p1}]Addr:[{p2}] {mac} - [{p1}]RSSI:[{p2}] {rssi} - [{p1}]Local_name:[{p2}] {name} - [{p1}]Manufacturer:[{p2}] {manuf} - [{p1}]UUID:[{p2}] {uuid}") 
                             #else: console.print(f"[{c2wq   }][+][/{c2}] [{p1}]Addr:[{p2}] {mac} - [{p1}]RSSI:[{p2}] {rssi} - [{p1}]Local_name:[{p2}] {name} - [{p1}]Manufacturer:[{p2}] {manuf} - [{p1}]UUID:[{p2}] {uuid}")
                         
+                        if print:
+                            if cls.num > 50:
+                                cls.num = 0
+                                console.print(table)
+                                table = Table(title="BLE Sniffer", title_style="bold red", border_style="bold purple", style="bold purple", header_style="bold red")
+                                if vendor_lookup: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer"); table.add_column("vendor", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
+                                else: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
 
-                        if cls.num > 50:
-                            cls.num = 0
-                            console.print(table)
-                            table = Table(title="BLE Sniffer", title_style="bold red", border_style="bold purple", style="bold purple", header_style="bold red")
-                            if vendor_lookup: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer"); table.add_column("vendor", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
-                            else: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
-
-
+ 
+                    DataBase.push_results(devices=cls.war_drive, verbose=False)
 
 
                         
@@ -144,14 +144,15 @@ class BLE_Sniffer():
             if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
             return KeyboardInterrupt
 
-        except Exception as e: console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}") 
-        if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
+        except Exception as e: 
+            console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}") 
+            if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
 
 
 
         
     @classmethod
-    def main(cls, timeout, vendor_lookup, war_drive):
+    def main(cls, timeout, vendor_lookup, war_drive=False, print=False):
         """Run from here"""
         
         cls.war_drive = {}
@@ -163,8 +164,8 @@ class BLE_Sniffer():
 
         try:
 
-            threading.Thread(target=BLE_Sniffer._ble_printer, args=(timeout, vendor_lookup, war_drive), daemon=True).start()
-            if war_drive: from server import Web_Server; Web_Server.start()
+            threading.Thread(target=BLE_Sniffer._ble_printer, args=(timeout, vendor_lookup, war_drive, print), daemon=True).start()
+            if war_drive or print: from server import Web_Server; Web_Server.start(CONSOLE=console); time.sleep(1)
             while True: time.sleep(1)
         
         
@@ -176,7 +177,6 @@ class BLE_Sniffer():
             console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}")
             if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
 
-            
 
 class BLE_Enumerater():
     """This class will be responsible for performing connections --> BLE"""
@@ -355,6 +355,8 @@ class BLE_Fuzzer():
                     uuid = character.uuid; description = character.description; handle = character.handle; properties = character.properties
                     hi = (uuid, properties); chars.append(hi); c_count+= 1
                     print(hi)
+                    console.print(f"[bold green][*][bold yellow] Found {len(services)} service(s) & {c_count} Characteristic(s)).\n"); return chars
+
 
 
         
@@ -362,11 +364,7 @@ class BLE_Fuzzer():
             console.print(f"[bold red]Exception Error:[bold yellow] {e}")
         
 
-        finally: 
-            console.print(f"[bold green][*][bold yellow] Found {len(services)} service(s) & {c_count} Characteristic(s)).\n"); return chars
-
-                
-
+        
     @classmethod
     async def _fuzzer(cls, client, uuid: any, send, response, f_type: int):
         """Lets get to fuzzing"""
