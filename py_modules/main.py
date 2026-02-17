@@ -12,14 +12,16 @@ import argparse
 
 
 # NSM MODULES
-from ble import BLE_Enumerater, BLE_Sniffer, BLE_Fuzzer, BLE_Connection_Spam
-from database import DataBase
+from nsm_ble import BLE_Enumerater, BLE_Sniffer, BLE_Fuzzer, BLE_Connection_Spam
+from nsm_telnet import Telnet_Brute_Forcer
 
 
 
 
 class Main_Menu():
     """This class will gatekeep program wide logic"""
+
+    # I wil be calling this project/Framework NodeX
 
 
     parser = argparse.ArgumentParser(
@@ -50,12 +52,14 @@ class Main_Menu():
     parser.add_argument("--response", help="Set write-response from client to True or False - 0 or 1")
 
 
+    parser.add_argument("--telnet", action="store_true", help="This will start a common dictionary attack on a given IP with a open telnet service using a preset list of credentials")
+
+
     args = parser.parse_args()
     
 
     # WAR DRIVING
     war   = args.w
-    war_v = args.wv
 
     # SCANNING
     scan = args.s 
@@ -73,26 +77,27 @@ class Main_Menu():
     response = args.response or False
     f_type   = args.type     or 1
 
-
     # CONNECTION SPAM
     conn     = args.c
     pair     = args.cp or False
 
+    # TELNET
+    telnet   = args.telnet
+
+    
+    if scan or vendor or war: 
+        BLE_Sniffer.main(scan=True if vendor else scan, timeout=int(time), vendor_lookup=vendor); exit()
 
 
+    if not mac and not telnet: console.print(f"[bold red]use -m to pass a MAC Addr silly goose..."); exit()
 
-    if scan or vendor or war or war_v: 
-        BLE_Sniffer.main(timeout=int(time), vendor_lookup=vendor, war_drive=war, print=war_v); exit()
-
-
-    if not mac: console.print(f"[bold red]use -m to pass a MAC Addr silly goose..."); exit()
-
-
-    if fuzz or fuzz_u: BLE_Fuzzer.main(target=mac, uuid=fuzz if fuzz else fuzz_u, send=send, response=response, f_type=int(f_type))
+    elif fuzz or fuzz_u: BLE_Fuzzer.main(target=mac, uuid=fuzz if fuzz else fuzz_u, send=send, response=response, f_type=int(f_type))
     
     elif conn or pair: BLE_Connection_Spam.main(target=mac, pair=pair)
     
     elif dump: BLE_Enumerater.main(target=mac)
+
+    elif telnet: Telnet_Brute_Forcer.main()
 
         
         

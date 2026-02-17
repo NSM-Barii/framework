@@ -12,7 +12,7 @@ import json, os; from pathlib import Path
 
 
 # NSM IMPORTS
-from ble import BLE_Sniffer
+from nsm_ble import BLE_Sniffer
 
 
 

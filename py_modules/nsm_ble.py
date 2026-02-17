@@ -17,7 +17,7 @@ import asyncio, os, time, random, threading
 
 
 # NSM IMPORTS
-from database import DataBase
+from nsm_database import DataBase
 
 
 console = Console()
@@ -55,7 +55,7 @@ class BLE_Sniffer():
 
 
     @classmethod
-    async def _ble_printer(cls, timeout, vendor_lookup, war_drive: bool, print: bool = True) -> None:
+    async def _ble_printer(cls, scan: bool, timeout, vendor_lookup) -> None:
         """Lets enumerate"""
 
 
@@ -66,8 +66,9 @@ class BLE_Sniffer():
         c5 = "bold blue"
         table = ""
 
-        if print:
-            table = Table(title="BLE Sniffer" if not war_drive else "BLE Driving", title_style="bold red", border_style="bold purple", style="bold purple", header_style="bold red")
+
+        if scan:
+            table = Table(title="BLE Sniffer", title_style="bold red", border_style="bold purple", style="bold purple", header_style="bold red")
             if vendor_lookup: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer"); table.add_column("vendor", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
             else: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
 
@@ -75,16 +76,17 @@ class BLE_Sniffer():
         try:
 
             scanner = BleakScanner()
+            time_start = time.time()
+
 
             with Live(table, console=console, refresh_per_second=4):
-                while 0 < timeout:
+                while time.time() - time_start < timeout:
                     
-                    
+
                     await scanner.start()
                     await asyncio.sleep(5)
                     await scanner.stop()
                     devices = scanner.discovered_devices_and_advertisement_data
-                    #devices = asyncio.run(BLE_Sniffer._ble_discover()); timeout -= 2
 
 
                     if not devices: return
@@ -97,6 +99,7 @@ class BLE_Sniffer():
                         uuid  = adv.service_uuids or False
                         manuf = DataBase._get_manufacturers(manufacturer_hex=adv.manufacturer_data, verbose=False) 
                         vendor = DataBase._get_vendor_main(mac=mac, verbose=False) if vendor_lookup else  False 
+                        up_time = time.time()
                                         
 
                         data = {
@@ -105,7 +108,8 @@ class BLE_Sniffer():
                             "manuf": manuf,
                             "vendor": vendor,
                             "name": name,
-                            "uuid": uuid
+                            "uuid": uuid,
+                            "up_time": up_time
                         }
 
 
@@ -116,7 +120,7 @@ class BLE_Sniffer():
                             cls.devices.append(mac); cls.num += 1
                             cls.war_drive[len(cls.devices)] = data
                             
-                            if print:
+                            if scan:
                                 if uuid: table.add_section()
                             
                                 p1 = c3; p2 = "white" 
@@ -126,25 +130,19 @@ class BLE_Sniffer():
                                 if uuid: table.add_section()
                             
 
-                            elif war_drive:
-                                console.print(f"{len(cls.devices)}", rssi, mac, manuf, vendor, name, uuid)
-                
-
 
                             #if vendor_lookup:  console.print(f"[{c2}][+][/{c2}] [{p1}]Addr:[{p2}] {mac} - [{p1}]RSSI:[{p2}] {rssi} - [{p1}]Local_name:[{p2}] {name} - [{p1}]Manufacturer:[{p2}] {manuf} - [{p1}]UUID:[{p2}] {uuid}") 
                             #else: console.print(f"[{c2wq   }][+][/{c2}] [{p1}]Addr:[{p2}] {mac} - [{p1}]RSSI:[{p2}] {rssi} - [{p1}]Local_name:[{p2}] {name} - [{p1}]Manufacturer:[{p2}] {manuf} - [{p1}]UUID:[{p2}] {uuid}")
                         
-                        if print:
-                            if cls.num > 50:
-                                cls.num = 0
-                                console.print(table)
-                                table = Table(title="BLE Sniffer", title_style="bold red", border_style="bold purple", style="bold purple", header_style="bold red")
-                                if vendor_lookup: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer"); table.add_column("vendor", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
-                                else: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
+                        if scan and cls.num > 50:
+                            cls.num = 0
+                            console.print(table)
+                            table = Table(title="BLE Sniffer", title_style="bold red", border_style="bold purple", style="bold purple", header_style="bold red")
+                            if vendor_lookup: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer"); table.add_column("vendor", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
+                            else: table.add_column("#"); table.add_column("RSSI", style=c2); table.add_column("Mac", style=c3); table.add_column("Manufacturer", style=c5); table.add_column("Local_name"); table.add_column("UUID", style=c3)
 
- 
+
                     DataBase.push_results(devices=cls.war_drive, verbose=False)
-
 
                         
 
@@ -152,43 +150,40 @@ class BLE_Sniffer():
 
 
         except KeyboardInterrupt:  
-            if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
             return KeyboardInterrupt
 
         except Exception as e: 
             console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}") 
-            if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
 
 
 
         
     @classmethod
-    def main(cls, timeout, vendor_lookup, war_drive=False, print=False):
+    def main(cls, scan, timeout, vendor_lookup):
         """Run from here"""
         
         cls.war_drive = {}
         cls.devices = []
         cls.live_map = {}
         cls.num =0
-        if war_drive: timeout = 30 * 60; vendor_lookup = True
+        #if scan: timeout = 30 * 60; vendor_lookup = True
 
 
         try:
             
             
-            if war_drive or print: from server import Web_Server; threading.Thread(target=Web_Server.start, args=(console, ), daemon=True).start(); time.sleep(1)
-            asyncio.run(BLE_Sniffer._ble_printer(timeout=timeout, vendor_lookup=vendor_lookup, war_drive=war_drive, print=print))
+            #if scan or vendor_lookup: from nsm_server import Web_Server; threading.Thread(target=Web_Server.start, args=(console, ), daemon=True).start(); time.sleep(1)
+            asyncio.run(BLE_Sniffer._ble_printer(scan=scan, timeout=timeout, vendor_lookup=vendor_lookup))
             #threading.Thread(target=asyncio.run(BLE_Sniffer._ble_printer), args=(timeout, vendor_lookup, war_drive, print), daemon=True).start()
-            while True: time.sleep(1)
         
         
         except KeyboardInterrupt:
             console.print("\n[bold red]Stopping....")
-            if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
+            if scan: DataBase.push_results(devices=cls.war_drive, verbose=False)
         
         except Exception as e:
             console.print(f"[bold red]Sniffer Exception Error:[bold yellow] {e}")
-            if war_drive: DataBase.push_results(devices=cls.war_drive, verbose=False)
+            if scan: DataBase.push_results(devices=cls.war_drive, verbose=False)
 
 
 class BLE_Enumerater():
