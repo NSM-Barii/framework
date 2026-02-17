@@ -4,6 +4,8 @@
 
 # UI IMPORTS
 from rich.console import Console
+from rich.panel import Panel
+import pyfiglet
 console = Console()
 
 
@@ -22,20 +24,15 @@ class Main_Menu():
     """This class will gatekeep program wide logic"""
 
 
+    data = (
+        "\n    [bold green]IoT & Wireless Security Framework"
+        "\n\n  [bold red]BLE • WiFi • Fuzzing • Recon • CVE Research"
+        "\n\n  [bold red]Offensive Security & Vuln Hunting"
+        "\n\n          [bold green]Made by NSM-Barii\n"
+    )
 
-    banner = """
-[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]
+    panel = Panel(renderable=data, expand=False, style="yellow")
 
-           [bold white]IoT & Wireless Security Framework[/bold white]
-        [bold yellow]BLE • WiFi • Fuzzing • Recon • CVE Research[/bold yellow]
-
-              [bold magenta]Offensive Security & Vuln Hunting[/bold magenta]
-                    [bold white]Made by NSM-Barii[/bold white]
-
-[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]
-"""
-    
-    
 
     # I wil be calling this project/Framework NodeX
 
@@ -102,7 +99,7 @@ class Main_Menu():
 
 
     if len(sys.argv) == 1:
-        console.print(banner)
+        console.print(panel)
         parser.print_help(); exit()
 
     

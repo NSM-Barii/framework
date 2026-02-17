@@ -1,5 +1,6 @@
 bleak
 rich
+pyfiglet
 pathlib
 mac-vendor-lookup
 manuf
