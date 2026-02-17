@@ -1,7 +1,5 @@
 # IoT Exploitation Framework
 
-**IoT Exploitation Framework**
-
 A comprehensive toolkit for security testing and vulnerability research on IoT devices through BLE, WiFi, and UART attack surfaces.
 
 > ⚠️ **This project is actively in development.** New features and modules are being added regularly. Expect frequent updates and improvements.
@@ -35,7 +33,7 @@ A comprehensive toolkit for security testing and vulnerability research on IoT d
 
 ```bash
 # Clone the repository
-git clone github.com/NSM-Barii/ble
+git clone github.com/NSM-Barii/framework
 cd ble/py_modules
 
 # Create and activate virtual environment
