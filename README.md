@@ -35,19 +35,19 @@ A comprehensive toolkit for security testing and vulnerability research on IoT d
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone <repo-url> ble
 cd ble/py_modules
 
 # Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
 
-# Install BlueZ driver (Linux/macOS)
-# On Ubuntu/Debian:
-sudo apt-get install bluez libbluetooth-dev
+# Install BlueZ driver (Linux only)
+# Ubuntu/Debian:
+sudo apt-get install bluez bluez-tools libbluetooth-dev
 
-# On macOS:
-brew install bluez
+# Arch Linux:
+sudo pacman -S bluez bluez-utils
 
 # Install Python dependencies
 pip install -r requirements.txt
@@ -121,6 +121,7 @@ ble/
 
 ## Requirements
 
+- Linux (Ubuntu/Debian/Arch)
 - Python 3.x
 - Bluetooth adapter (for BLE testing)
 - Root access on Android device (for mobile features)
