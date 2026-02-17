@@ -34,7 +34,7 @@ A comprehensive toolkit for security testing and vulnerability research on IoT d
 ```bash
 # Clone the repository
 git clone github.com/NSM-Barii/framework
-cd ble/py_modules
+cd framework/py_modules
 
 # Create and activate virtual environment
 python3 -m venv venv
