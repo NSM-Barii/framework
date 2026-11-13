@@ -1,0 +1,136 @@
+HEX, BITS & BYTES — QUICK REFERENCE
+=====================================
+Understanding raw data in RF and security work.
+
+
+BITS
+----
+A bit is a single 1 or 0. Smallest unit of data — one switch, on or off.
+
+
+BYTES
+-----
+A byte is 8 bits grouped together.
+
+    1 bit  =  0 or 1
+    1 byte =  01001000  (8 bits)
+
+One byte can represent values from 0 to 255 (256 total values).
+Every piece of data in RF, networking, and security is built from bytes.
+
+
+HEXADECIMAL
+-----------
+Hex is base 16 — a shorter way to write bytes.
+Instead of writing 8 bits, you write 2 characters.
+
+Decimal (base 10) uses 10 symbols: 0-9.
+Hex needs 16, so after 9 it borrows letters:
+
+    Hex:  0  1  2  3  4  5  6  7  8  9  A   B   C   D   E   F
+    Dec:  0  1  2  3  4  5  6  7  8  9  10  11  12  13  14  15
+
+The only thing to memorize: A = 10, then count up.
+    A = 10
+    B = 11
+    C = 12
+    D = 13
+    E = 14
+    F = 15
+
+
+HOW HEX MAPS TO BYTES
+----------------------
+Each hex character = 4 bits (called a "nibble").
+Two hex characters = 1 byte.
+
+    hex:    9        8
+    binary: 1001     1000
+            4 bits + 4 bits = 8 bits = 1 byte
+            -> 0x98
+
+
+CONVERTING HEX TO DECIMAL
+--------------------------
+For a single byte (2 hex digits): first digit x 16 + second digit.
+
+    0x98  ->  9 x 16 +  8 = 152
+    0xFF  -> 15 x 16 + 15 = 255  (max byte value)
+    0x41  ->  4 x 16 +  1 = 65
+    0x0C  ->  0 x 16 + 12 = 12
+    0xD8  -> 13 x 16 +  8 = 216
+
+For more digits, each position is the next power of 16:
+
+    0x984  ->  9 x 256  +  8 x 16  +  4 x 1  =  2440
+
+But for RF work you're almost always looking at single bytes,
+so first x 16 + second covers 99% of it.
+
+
+THE 0x PREFIX
+-------------
+0x means "this number is hex, not decimal." Not part of the value.
+
+    98    ->  ambiguous (decimal ninety-eight?)
+    0x98  ->  definitely hex = 152 in decimal
+
+All the base prefixes:
+
+    0x  = hex     (base 16)   0x98           = 152
+    0b  = binary  (base 2)    0b10011000     = 152
+    0o  = octal   (base 8)    0o230          = 152
+    (none) = decimal          152            = 152
+
+All four are the same number.
+This convention comes from C (1970s) and is used by virtually
+every language and system — Python, C, Java, Rust, Go, debuggers, hex editors.
+
+
+AFTER F — HOW HEX COUNTS
+-------------------------
+After F (15), hex carries over to 10 — same way decimal carries after 9:
+
+    Single digit:  0 1 2 3 4 5 6 7 8 9 A B C D E F
+    Then carry:   10 11 12 ... 19 1A 1B 1C 1D 1E 1F
+                  20 21 22 ... 29 2A 2B ... 2F
+                  ...
+                  F0 F1 ... F9 FA FB FC FD FE FF
+
+0xFF = 255 = maximum value for one byte.
+After that, carry to 0x100 (256).
+
+
+APPLIED: Z-WAVE FRAME
+----------------------
+A real Z-Wave SECURITY_NONCE_GET frame on the wire:
+
+    Raw hex: d8 e5 c2 b4 01 41 01 0c 08 98 40 29
+
+    Bytes   Hex           Field    Meaning
+    -----   -----------   ------   -----------------------------------
+    0-3     d8 e5 c2 b4   HomeID   Network identifier (always plaintext)
+    4       01            Src      Sender node (1 = controller)
+    5-6     41 01         FC       Frame control (singlecast, seq=1)
+    7       0c            Len      Total frame length = 12
+    8       08            Dst      Destination node (8 = Yale lock)
+    9       98            CC       Command class (SECURITY_S0)
+    10      40            Cmd      Command (NONCE_GET)
+    11      29            Chk      XOR checksum (seed 0xFF)
+
+12 hex pairs = 12 bytes = 96 bits on the wire.
+
+The header (HomeID, Src, FC, Len, Dst) is always plaintext — even on
+encrypted S0 networks. Only the payload gets encrypted. That's why
+passive recon works: you can map every node, see who talks to who,
+and detect security levels without cracking anything.
+
+
+QUICK REFERENCE
+---------------
+    Bits -> Bytes       8 bits = 1 byte
+    Bytes -> Hex        1 byte = 2 hex chars
+    Hex -> Decimal      first x 16 + second
+    Max byte value      0xFF = 255
+    Hex letters         A=10  B=11  C=12  D=13  E=14  F=15
+    Prefixes            0x (hex)  0b (binary)  0o (octal)
