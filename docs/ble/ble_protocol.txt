@@ -1,0 +1,205 @@
+BLE PROTOCOL FUNDAMENTALS
+==========================
+Bluetooth Low Energy (BLE) — the wireless protocol used by IoT devices,
+wearables, smart home sensors, and medical devices.
+
+
+PHYSICAL LAYER
+--------------
+BLE operates in the 2.4 GHz ISM band (2400-2483.5 MHz), the same
+unlicensed band as WiFi and classic Bluetooth.
+
+The band is divided into 40 channels, each 2 MHz wide:
+
+    3 advertising channels:  37 (2402 MHz), 38 (2426 MHz), 39 (2480 MHz)
+    37 data channels:        0-36 (2404-2478 MHz, excluding the 3 above)
+
+The advertising channels are deliberately spread across the band — 2402,
+2426, and 2480 — so they avoid the three most common WiFi channels (1, 6,
+and 11) that sit at 2412, 2437, and 2462 MHz. This reduces interference
+from WiFi networks sharing the same band. [1][2]
+
+Data rate: 1 Mbps (BLE 4.x), 2 Mbps (BLE 5.0+ with 2M PHY), or
+125/500 kbps (BLE 5.0+ Coded PHY for long range). [3]
+
+Modulation: Gaussian Frequency Shift Keying (GFSK) with +/-250 kHz
+deviation for 1M PHY. [1]
+
+
+FREQUENCY HOPPING
+-----------------
+During a connection, BLE hops among the 37 data channels using adaptive
+frequency hopping (AFH). The master device selects which channels to use
+and shares a channel map with the slave. Channels with poor packet
+success rates (from WiFi interference, microwave ovens, etc.) are
+marked as "bad" and excluded from the hop sequence. [1][4]
+
+BLE 4.x used "Algorithm #1" — a simple modular hop. BLE 5.0 introduced
+"Algorithm #2" (Channel Selection Algorithm 2) which distributes hops
+more uniformly across available channels. [3]
+
+Advertising does not hop adaptively — it cycles through channels 37,
+38, 39 in sequence during each advertising event. [1]
+
+
+GAP — GENERIC ACCESS PROFILE
+-----------------------------
+GAP defines how BLE devices discover each other and establish connections.
+It defines four roles:
+
+    Broadcaster  — sends advertisements, never connects
+    Observer     — scans for advertisements, never connects
+    Peripheral   — advertises and accepts connections (server)
+    Central      — scans and initiates connections (client)
+
+An advertising device sends packets on channels 37, 38, 39 in sequence.
+Each advertisement can contain up to 31 bytes of data (legacy) or
+up to 255 bytes using extended advertising (BLE 5.0+). [1][3]
+
+Advertisement data includes fields like:
+    - Flags (discoverable mode, BR/EDR support)
+    - Local Name (complete or shortened device name)
+    - TX Power Level
+    - Service UUIDs (16-bit SIG-adopted or 128-bit custom)
+    - Manufacturer Specific Data (vendor-defined, variable format)
+
+A scanner can be passive (just listens) or active (sends SCAN_REQ to
+get additional data via SCAN_RSP from the advertiser). [1]
+
+
+GATT — GENERIC ATTRIBUTE PROFILE
+----------------------------------
+GATT defines how data is organized and exchanged over a BLE connection.
+It sits on top of the Attribute Protocol (ATT). [5][6]
+
+GATT uses a client-server model:
+    - The GATT Server holds the data (typically the peripheral/sensor)
+    - The GATT Client reads/writes that data (typically the central/phone)
+
+Data is organized in a hierarchy:
+
+    Profile
+      └── Service (grouped by function, identified by UUID)
+            └── Characteristic (one data value + properties)
+                  └── Descriptor (metadata about the characteristic)
+
+Services group related data. For example, a Heart Rate Service contains
+characteristics for heart rate measurement, body sensor location, and
+heart rate control point. [5][6]
+
+Characteristics define:
+    - A value (the actual data)
+    - Properties (read, write, notify, indicate, etc.)
+    - Zero or more descriptors
+
+UUIDs identify services and characteristics:
+    - 16-bit UUIDs: officially adopted by the Bluetooth SIG (e.g. 0x180D
+      = Heart Rate Service, 0x180F = Battery Service)
+    - 128-bit UUIDs: custom/vendor-specific [5][6]
+
+Key operations:
+    - Read: client requests a characteristic value
+    - Write: client sends a value to the server
+    - Notify: server pushes updates to client (no acknowledgment)
+    - Indicate: server pushes updates to client (with acknowledgment)
+
+
+ATT — ATTRIBUTE PROTOCOL
+-------------------------
+ATT is the lower-level protocol that GATT builds on. Every piece of data
+on a GATT server is stored as an attribute with three fields: [5]
+
+    Handle:  16-bit address (0x0001 to 0xFFFF)
+    Type:    UUID identifying what the attribute is
+    Value:   the actual data (up to 512 bytes per spec)
+
+ATT is optimized for low-power devices — it uses small packets and
+simple request/response pairs. The default MTU is 23 bytes (allowing
+20 bytes of payload after the 3-byte ATT header), but BLE 4.2+ allows
+MTU negotiation up to 517 bytes. [5]
+
+
+BLE SECURITY
+------------
+BLE pairing establishes an encrypted link. There are two generations:
+
+LE Legacy Pairing (BLE 4.0-4.1):
+    - Uses Temporary Key (TK) and Short Term Key (STK)
+    - Pairing methods: Just Works, Passkey Entry, Out of Band (OOB)
+    - Just Works uses TK = 0 — vulnerable to passive eavesdropping
+    - Passkey uses a 6-digit PIN (20 bits of entropy) — vulnerable to
+      brute force if the pairing exchange is captured [7]
+
+LE Secure Connections (BLE 4.2+):
+    - Uses Elliptic Curve Diffie-Hellman (ECDH) for key exchange
+    - Generates Long Term Key (LTK) directly from the ECDH shared secret
+    - Pairing methods: Just Works, Passkey Entry, Numeric Comparison, OOB
+    - Just Works still has no MITM protection
+    - Numeric Comparison (new in 4.2) shows a 6-digit code on both
+      devices for the user to confirm — provides MITM protection [7]
+
+Encryption: AES-128-CCM for both legacy and secure connections. [1]
+
+Privacy: BLE 4.2+ supports LE Privacy, where devices rotate their
+MAC address using an Identity Resolving Key (IRK). Only bonded devices
+can resolve the random address back to the real one. This counters
+MAC-based tracking. [1]
+
+
+BLE VERSIONS
+------------
+    4.0 (2010)  — BLE introduced as "Bluetooth Smart"
+    4.1 (2013)  — coexistence with LTE, connection parameter updates
+    4.2 (2014)  — LE Secure Connections (ECDH), LE Data Length Extension,
+                   LE Privacy 1.2
+    5.0 (2016)  — 2M PHY (2 Mbps), Coded PHY (long range), extended
+                   advertising (255 bytes), advertising sets
+    5.1 (2019)  — direction finding (AoA/AoD for indoor positioning)
+    5.2 (2020)  — LE Audio (LC3 codec), isochronous channels
+    5.3 (2021)  — connection subrating, channel classification
+    5.4 (2023)  — Periodic Advertising with Response (PAwR),
+                   Encrypted Advertising Data [3][8]
+
+
+SECURITY RESEARCH NOTES
+------------------------
+Common BLE attack surfaces:
+    - Unencrypted advertisements: device names, service UUIDs, and
+      manufacturer data are broadcast in plaintext by default
+    - Just Works pairing: no MITM protection, passive eavesdrop recovers
+      the encryption key for legacy pairing
+    - GATT enumeration: once connected, all services and characteristics
+      are readable unless the device enforces authentication
+    - Writable characteristics without authentication: some devices
+      accept writes from any connected client
+    - Static MAC addresses: devices that do not use LE Privacy can be
+      tracked by their fixed MAC address
+    - Replay: some devices do not use sequence numbers or nonces on
+      GATT writes, allowing captured write commands to be replayed
+
+
+SOURCES
+-------
+[1] Bluetooth Core Specification (Bluetooth SIG)
+    https://www.bluetooth.com/specifications/specs/core-specification/
+
+[2] Bluetooth Low Energy Primer (Bluetooth SIG)
+    https://www.bluetooth.com/bluetooth-le-primer/
+
+[3] Bluetooth 5 Feature Overview (Bluetooth SIG)
+    https://www.bluetooth.com/wp-content/uploads/2019/03/Bluetooth_5-FINAL.pdf
+
+[4] Adaptive Hopping for Bluetooth (arXiv:2410.07628)
+    https://arxiv.org/pdf/2410.07628
+
+[5] Generic Attribute Profile (GATT) — Silicon Labs
+    https://docs.silabs.com/bluetooth/11.1.0/bluetooth-le-fundamentals/07-generic-attribute-profile-gatt
+
+[6] Introduction to BLE GATT (Adafruit)
+    https://learn.adafruit.com/introduction-to-bluetooth-low-energy/gatt
+
+[7] An Overview of Wireless IoT Protocol Security (arXiv:1801.07090)
+    https://arxiv.org/pdf/1801.07090
+
+[8] Bluetooth 5.4 Technical Overview (Bluetooth SIG, Feb 2023)
+    https://www.bluetooth.com/wp-content/uploads/2023/02/2301_5.4_Tech_Overview_FINAL.pdf

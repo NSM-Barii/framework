@@ -1,0 +1,241 @@
+WIFI (802.11) PROTOCOL FUNDAMENTALS
+=====================================
+IEEE 802.11 — the standard behind all WiFi networks.
+
+
+PHYSICAL LAYER
+--------------
+WiFi operates on three frequency bands:
+
+    2.4 GHz (802.11b/g/n/ax)
+        - 14 channels, 22 MHz wide each (channels 1-13 most regions, 14 Japan only)
+        - Only 3 non-overlapping channels: 1 (2412 MHz), 6 (2437 MHz), 11 (2462 MHz)
+        - Better range and wall penetration, more crowded (shared with BLE, microwaves)
+
+    5 GHz (802.11a/n/ac/ax)
+        - 25+ non-overlapping channels (varies by region)
+        - Channel widths: 20, 40, 80, or 160 MHz
+        - Shorter range, less interference, higher throughput
+
+    6 GHz (802.11ax/be — WiFi 6E / WiFi 7)
+        - 59 new 20 MHz channels (1200 MHz of spectrum)
+        - Requires WiFi 6E or WiFi 7 hardware
+
+Standard evolution:
+
+    802.11b  (1999)   2.4 GHz    11 Mbps     DSSS
+    802.11a  (1999)   5 GHz      54 Mbps     OFDM
+    802.11g  (2003)   2.4 GHz    54 Mbps     OFDM
+    802.11n  (2009)   2.4/5 GHz  600 Mbps    OFDM + MIMO        WiFi 4
+    802.11ac (2013)   5 GHz      6.9 Gbps    OFDM + MU-MIMO     WiFi 5
+    802.11ax (2021)   2.4/5/6    9.6 Gbps    OFDMA + MU-MIMO    WiFi 6/6E
+    802.11be (2024)   2.4/5/6    46 Gbps     OFDMA + MLO         WiFi 7
+
+Speeds listed are theoretical maximums per the IEEE standard. [1][2]
+
+
+FRAME TYPES
+-----------
+Every 802.11 frame has a Frame Control field with a 2-bit Type and
+4-bit Subtype. There are three frame types: [3]
+
+    Type 0 — Management:  network operations (no user data)
+    Type 1 — Control:     medium access coordination
+    Type 2 — Data:        actual payload transport
+
+MANAGEMENT FRAMES (Type 0):
+
+    Subtype   Name                     Purpose
+    -------   ----                     -------
+    0x00      Association Request      Client asks to join a BSS
+    0x01      Association Response     AP accepts or rejects
+    0x02      Reassociation Request    Client moves to a new AP
+    0x03      Reassociation Response   New AP accepts or rejects
+    0x04      Probe Request            Client scans for networks
+    0x05      Probe Response           AP responds with its info
+    0x08      Beacon                   AP announces its presence (periodic)
+    0x09      ATIM                     Traffic indication (IBSS/ad-hoc)
+    0x0A      Disassociation           Ends an association
+    0x0B      Authentication           Identity verification step
+    0x0C      Deauthentication         Forces client disconnect
+    0x0D      Action                   Spectrum mgmt, block ack setup, etc.
+
+Management frames are NOT encrypted in WPA2. This is why deauth attacks
+work — anyone can forge a deauthentication frame because there is no
+authentication on management frames. WPA3 adds Protected Management
+Frames (PMF / 802.11w) as mandatory, which signs management frames
+with the session key. [3][4]
+
+CONTROL FRAMES (Type 1):
+
+    Subtype   Name
+    -------   ----
+    0x08      Block Ack Request (BAR)
+    0x09      Block Ack (BA)
+    0x0A      PS-Poll
+    0x0B      RTS (Request to Send)
+    0x0C      CTS (Clear to Send)
+    0x0D      ACK (Acknowledgment)
+    0x0E      CF-End
+    0x0F      CF-End + CF-ACK
+
+RTS/CTS solves the hidden node problem — two clients that can't hear
+each other but can both reach the AP. RTS reserves the medium before
+sending. [3]
+
+DATA FRAMES (Type 2):
+
+    Subtype   Name
+    -------   ----
+    0x00      Data
+    0x04      Null (no data, used for power save signaling)
+    0x08      QoS Data (WiFi 4+ for traffic prioritization)
+
+
+MEDIUM ACCESS — CSMA/CA
+------------------------
+WiFi uses Carrier Sense Multiple Access / Collision Avoidance:
+
+    1. Listen — is the channel busy?
+    2. If busy, wait and try again (random backoff)
+    3. If clear, transmit
+    4. Wait for ACK from receiver
+    5. No ACK = collision assumed, retransmit with longer backoff
+
+Unlike wired Ethernet (CSMA/CD), WiFi cannot detect collisions during
+transmission because a radio cannot transmit and receive simultaneously
+on the same frequency. It avoids collisions instead of detecting them. [1]
+
+
+SECURITY — WEP, WPA, WPA2, WPA3
+---------------------------------
+WEP (1997) — BROKEN. DO NOT USE.
+    - RC4 stream cipher with 24-bit IV
+    - IV is too short — repeats after ~5000 packets
+    - Key recovery in under 60 seconds with tools like aircrack-ng [5]
+
+WPA (2003) — DEPRECATED.
+    - TKIP (Temporal Key Integrity Protocol) — RC4 with per-packet keys
+    - 48-bit IV, Michael MIC for integrity
+    - Addressed WEP's IV reuse but still uses RC4
+    - TKIP has known weaknesses (Beck-Tews, Ohigashi-Morii attacks) [5]
+
+WPA2 (2004) — CURRENT STANDARD.
+    - CCMP (Counter Mode CBC-MAC Protocol) using AES-128
+    - Replaces RC4 entirely with AES block cipher
+    - 48-bit packet number prevents replay attacks
+    - Two modes:
+        WPA2-Personal (PSK): shared password, vulnerable to offline
+            dictionary attacks if the 4-way handshake is captured
+        WPA2-Enterprise (802.1X): per-user credentials via RADIUS server
+    - Vulnerability: KRACK attack (2017) exploits 4-way handshake
+      nonce reuse to decrypt traffic [5][6]
+
+WPA3 (2018) — LATEST STANDARD.
+    - SAE (Simultaneous Authentication of Equals) replaces PSK
+      for WPA3-Personal — a Dragonfly key exchange where both sides
+      prove knowledge of the password without sending it. Resistant
+      to offline dictionary attacks. [4][7]
+    - Forward secrecy: each session derives unique keys. Capturing
+      today's traffic is useless even if the password is later
+      compromised. [4]
+    - Protected Management Frames (PMF / 802.11w) mandatory — signs
+      management frames, prevents deauth and disassociation attacks [4]
+    - 192-bit security suite for WPA3-Enterprise (CNSA/GCMP-256)
+    - Vulnerability: Dragonblood (2019) found side-channel and
+      downgrade attacks against early SAE implementations [7]
+
+
+THE 4-WAY HANDSHAKE (WPA2/WPA3)
+---------------------------------
+After association and authentication, the 4-way handshake generates
+session keys. It uses EAPOL (Extensible Authentication Protocol over
+LAN) frames: [6]
+
+    1. AP -> Client:  ANonce (AP's random nonce)
+       Client derives PTK from: PMK + ANonce + SNonce + MAC addresses
+
+    2. Client -> AP:  SNonce + MIC (Message Integrity Check)
+       AP derives the same PTK and verifies the MIC
+
+    3. AP -> Client:  GTK (Group Temporal Key, encrypted) + MIC
+       GTK is for broadcast/multicast traffic
+
+    4. Client -> AP:  ACK
+       Both sides install the PTK, encrypted data begins
+
+    PMK = Pairwise Master Key (derived from password + SSID in WPA2-PSK)
+    PTK = Pairwise Transient Key (per-session, per-client)
+    GTK = Group Temporal Key (shared by all clients for broadcast)
+
+The PTK is derived using:
+    PTK = PRF(PMK, "Pairwise key expansion", min(AA,SA) || max(AA,SA)
+              || min(ANonce,SNonce) || max(ANonce,SNonce))
+
+    AA = AP MAC address, SA = Client MAC address
+
+This is why capturing the handshake + a dictionary attack works against
+WPA2-PSK — the PMK is deterministic from the password and SSID. [6]
+
+
+MONITOR MODE
+------------
+Normal WiFi mode (managed/station) only shows frames addressed to your
+device. Monitor mode puts the adapter into a raw capture state where it
+sees ALL frames on the tuned channel — management, control, and data
+from every device, including frames not addressed to you.
+
+Required for:
+    - Packet capture (airodump-ng, Wireshark, tshark, scapy)
+    - Deauthentication attacks (sending forged management frames)
+    - Handshake capture (for WPA2 cracking)
+    - Wardriving (passive AP enumeration)
+    - Client tracking (probe request monitoring)
+
+Not all WiFi adapters support monitor mode — it requires chipset and
+driver support. Common chipsets: Realtek RTL8812AU, Atheros AR9271,
+Mediatek MT7612U. [1]
+
+
+SECURITY RESEARCH NOTES
+------------------------
+Common WiFi attack surfaces:
+    - Deauthentication: forge 0x0C frames to disconnect clients (no
+      protection in WPA2, blocked by PMF in WPA3)
+    - Handshake capture + offline brute force: capture EAPOL 4-way
+      handshake, run dictionary attack against the PSK
+    - Evil twin: clone an AP's SSID and channel, clients connect to
+      you instead — all traffic visible
+    - Probe request tracking: client devices broadcast SSIDs they've
+      connected to before, revealing location history
+    - KRACK: force nonce reuse in the 4-way handshake to derive
+      keystream and decrypt traffic (CVE-2017-13077 through 13088)
+    - Beacon flood: broadcast thousands of fake beacon frames to fill
+      client WiFi scan lists with garbage SSIDs
+    - PMKID attack (WPA2): request the PMKID from the AP without
+      completing the handshake, then crack it offline — does not
+      require a connected client
+
+
+SOURCES
+-------
+[1] IEEE 802.11-2020 Standard
+    https://standards.ieee.org/ieee/802.11/7028/
+
+[2] WiFi Alliance — WiFi Generations
+    https://www.wi-fi.org/discover-wi-fi
+
+[3] 802.11 Frame Types (Wikipedia, cross-referenced with IEEE 802.11-2020 Table 9-1)
+    https://en.wikipedia.org/wiki/802.11_frame_types
+
+[4] WPA3 Specification (Wi-Fi Alliance, 2018)
+    https://www.wi-fi.org/discover-wi-fi/security
+
+[5] Evolution of WiFi Security — WEP to WPA3 (Purple AI)
+    https://www.purple.ai/guides/wpa-wpa2-wpa3-comparison
+
+[6] WPA2 Four-Way Handshake Analysis (TU Munich, NET-2020-11-1)
+    https://www.net.in.tum.de/fileadmin/TUM/NET/NET-2020-11-1/NET-2020-11-1_02.pdf
+
+[7] Dragonblood: Analyzing the Dragonfly Handshake of WPA3
+    https://wpa3.mathyvanhoef.com/

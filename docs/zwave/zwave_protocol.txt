@@ -1,0 +1,254 @@
+Z-WAVE PROTOCOL FUNDAMENTALS
+==============================
+Z-Wave — the low-power mesh protocol used by smart locks, sensors,
+thermostats, and home automation controllers.
+
+
+PHYSICAL LAYER
+--------------
+Z-Wave operates on sub-GHz frequencies, which vary by region:
+
+    Region          Frequency     ITU-T G.9959
+    ------          ---------     ------------
+    US / Canada     908.42 MHz    Yes
+    Europe          868.42 MHz    Yes
+    Australia       921.42 MHz    Yes
+    Japan           922.5 MHz     Yes (modified)
+    India           865.2 MHz     Yes
+
+Sub-GHz has two advantages over 2.4 GHz protocols (WiFi, BLE, Zigbee):
+    1. Better range — longer wavelengths propagate further and penetrate
+       walls more effectively
+    2. Less interference — the sub-GHz band is far less crowded than
+       2.4 GHz [1][2]
+
+Data rates:
+    9.6 kbps   — original (300 series), FSK modulation
+    40 kbps    — standard (500 series), FSK modulation
+    100 kbps   — Z-Wave Long Range (700/800 series), DSSS/OFDM
+
+The 40 kbps rate uses NRZ (Non-Return-to-Zero) FSK with +/-20 kHz
+frequency deviation. This is what your HackRF demodulates. [1][2]
+
+
+FRAME STRUCTURE (MAC LAYER)
+----------------------------
+A Z-Wave frame on the wire:
+
+    [Preamble][SOF][HomeID][Src][FC][Len][Dst][Payload][Checksum]
+
+Byte-level breakdown:
+
+    Field       Bytes   Description
+    -----       -----   -----------
+    Preamble    10+     Alternating 1/0 bits for clock recovery
+    SOF         1       Start of Frame marker: 0xF0 (11110000)
+    HomeID      4       Network identifier (unique per Z-Wave network)
+    Src         1       Source node ID (1-232)
+    FC          2       Frame Control (frame type, routing, ack request)
+    Len         1       Total frame length including checksum
+    Dst         1       Destination node ID (1-232, or 255 = broadcast)
+    Payload     N       Command class + command + data
+    Checksum    1       XOR of all bytes from HomeID to last payload byte
+                        with initial seed 0xFF
+
+The checksum algorithm:
+    chk = 0xFF
+    for each byte in frame (HomeID through end of payload):
+        chk = chk XOR byte
+    checksum = chk
+
+Node IDs range from 1 to 232. Node 1 is conventionally the primary
+controller (hub). Node 255 is the broadcast address. [1][2][3]
+
+
+NETWORK TOPOLOGY
+-----------------
+Z-Wave uses a source-routed mesh network:
+
+    - One primary controller assigns node IDs and maintains the
+      routing table
+    - Up to 232 nodes per network
+    - Each network has a unique 4-byte HomeID
+    - Mains-powered devices act as repeaters (routing slaves)
+    - Battery devices do NOT route — they sleep to save power
+    - Maximum 4 hops between source and destination [1][2]
+
+The controller builds the routing table through network-wide
+exploration. When a node sends a frame, the route is encoded in the
+frame header (source routing). If a route fails, the controller
+can reassign it.
+
+
+COMMAND CLASSES
+---------------
+The payload of a Z-Wave frame starts with a Command Class byte,
+followed by a Command byte, then optional data.
+
+    Payload = [CC][Cmd][Data...]
+
+Common command classes:
+
+    Hex    Name                 Purpose
+    ---    ----                 -------
+    0x00   NO_OPERATION         Network ping / reachability test
+    0x20   BASIC                Simple on/off/level control
+    0x25   SWITCH_BINARY        On/off switches and plugs
+    0x26   SWITCH_MULTILEVEL    Dimmers, motor controls
+    0x31   SENSOR_MULTILEVEL    Temperature, humidity, light sensors
+    0x40   THERMOSTAT_MODE      Heat/cool/auto/off mode selection
+    0x43   THERMOSTAT_SETPOINT  Target temperature setting
+    0x62   DOOR_LOCK            Lock/unlock, lock state reporting
+    0x71   ALARM/NOTIFICATION   Intrusion, smoke, water, tamper alerts
+    0x72   MANUFACTURER_SPECIFIC  Vendor ID, product ID
+    0x80   BATTERY              Battery level reporting
+    0x84   WAKE_UP              Battery device sleep/wake scheduling
+    0x86   VERSION              Protocol and firmware version
+    0x98   SECURITY_S0          S0 encrypted communication
+    0x9F   SECURITY_S2          S2 encrypted communication [2][4]
+
+Command classes are how you identify device roles from passive recon:
+    - 0x62 = it's a lock
+    - 0x40/0x43 = it's a thermostat
+    - 0x25 = it's a switch or plug
+    - 0x31 = it's a sensor
+    - 0x98 = it uses S0 encryption
+    - 0x9F = it uses S2 encryption
+
+
+SECURITY S0
+-----------
+S0 (Security Command Class 0x98) was the first Z-Wave encryption layer.
+Introduced with the 300 series. [4][5]
+
+Encryption: AES-128-OFB (Output Feedback mode)
+Integrity:  AES-128-CBC-MAC (8-byte MAC)
+Nonce:      8-byte random nonce, exchanged per-message
+
+How an S0 encrypted exchange works:
+
+    1. Sender -> Receiver:  SECURITY_NONCE_GET (0x98, 0x40)
+       "Give me a fresh nonce"
+
+    2. Receiver -> Sender:  SECURITY_NONCE_REPORT (0x98, 0x80)
+       "Here's an 8-byte random nonce"
+
+    3. Sender -> Receiver:  SECURITY_MESSAGE_ENCAPSULATION (0x98, 0x81)
+       Contains: sender nonce (8B) + encrypted payload + MAC (8B)
+
+Each encrypted message requires a fresh nonce exchange. This adds
+latency but prevents replay attacks. [4][5]
+
+Key hierarchy:
+    Network Key  ->  Authentication Key (AES-ECB encrypt 0x55...55 with network key)
+                 ->  Encryption Key     (AES-ECB encrypt 0xAA...AA with network key)
+
+THE S0 VULNERABILITY (Z-SHAVE):
+During S0 inclusion (pairing), the network key is transmitted encrypted
+under a temporary key. That temporary key is a fixed, well-known value:
+all zeros (16 bytes of 0x00). Anyone passively listening during
+inclusion captures the network key in a single exchange.
+
+    1. Controller sends SECURITY_SCHEME_REPORT
+    2. New device sends SECURITY_NETWORK_KEY_SET encrypted with
+       temp_key = 0x00000000000000000000000000000000
+    3. Attacker captures frame, decrypts with the known temp key,
+       recovers the real network key
+
+Once the attacker has the network key, they can:
+    - Decrypt all past and future S0 traffic
+    - Derive the authentication and encryption subkeys
+    - Forge commands (lock/unlock, arm/disarm) [5][6]
+
+
+SECURITY S2
+-----------
+S2 (Security 2 Command Class 0x9F) replaced S0 to fix the key exchange
+vulnerability. Mandated for Z-Wave certification since April 2017. [4][7]
+
+Key exchange: Elliptic Curve Diffie-Hellman (ECDH) over Curve25519.
+The shared secret is computed without transmitting any key material.
+Even a passive listener cannot recover the network key. [7]
+
+Three security classes with separate network keys:
+    S2 Access Control     — highest: locks, garage doors
+    S2 Authenticated      — sensors, thermostats (user confirms DSK)
+    S2 Unauthenticated    — basic devices (no user confirmation)
+
+Each class has its own AES-128-CCM key. A device granted "Access
+Control" cannot read traffic encrypted with "Authenticated" keys
+and vice versa. [4][7]
+
+Encryption: AES-128-CCM (combined encryption + authentication)
+Nonce: SPAN (Singlecast Pre-Agreed Nonce) — nonces are derived from
+a synchronized counter, eliminating the per-message nonce exchange
+that S0 requires. This is faster and removes the nonce as an
+attack surface. [7]
+
+THE DOWNGRADE ATTACK:
+Even with S2, the Z-Shave attack demonstrated that a man-in-the-middle
+can intercept the S2 inclusion and tell both sides that the other
+only supports S0. The pairing then falls back to S0, exposing the
+network key. This requires active interference during the brief
+inclusion window. [6]
+
+
+Z-WAVE CHIP GENERATIONS
+-------------------------
+    300 series   — original, 9.6 kbps, S0 only
+    500 series   — 40 kbps, S0/S2, most common in field
+    700 series   — 100 kbps Long Range, S2, improved battery life
+    800 series   — latest, Z-Wave Long Range 2, enhanced security
+
+The 800 series (like in your SmartRent Alloy Hub) added measures
+against the S0 downgrade attack. Older 300/500 series devices are
+the primary targets for S0-based attacks. [2][4]
+
+
+SECURITY RESEARCH NOTES
+------------------------
+Z-Wave attack surfaces:
+    - S0 key recovery: passively capture one inclusion event to
+      recover the network key (Z-Shave, CVE-2018-11825)
+    - S2 downgrade: active MITM during inclusion forces S0 fallback
+    - Frame replay: S0 nonce reuse or exhaustion (nonce pool is
+      finite on some implementations)
+    - Node enumeration: send NO_OP (0x00) to each node ID 1-232,
+      valid nodes respond
+    - Command class enumeration: probe a node with VERSION_GET for
+      each CC to fingerprint the device
+    - Plaintext networks: some older devices use no encryption at
+      all — commands are fully visible and forgeable
+    - Controller fuzzing: malformed frames can crash Z-Wave
+      controllers (ZCOVER found 12 CVEs, VFuzz found 18+ CVEs
+      through mutation-based Z-Wave frame fuzzing) [8][9]
+
+
+SOURCES
+-------
+[1] ITU-T G.9959 — Short Range Narrowband Digital Radiocommunication
+    https://www.itu.int/rec/T-REC-G.9959
+
+[2] Z-Wave Technical Basics (Silicon Labs)
+    https://www.silabs.com/wireless/z-wave
+
+[3] Security Evaluation of Z-Wave (SensePost, Black Hat 2013)
+    https://sensepost.com/cms/resources/conferences/2013/bh_zwave/Security%20Evaluation%20of%20Z-Wave_WP.pdf
+
+[4] Z-Wave Security Specification (Silicon Labs)
+    https://www.silabs.com/wireless/z-wave/specification/security
+
+[5] An Overview of Wireless IoT Protocol Security (arXiv:1801.07090)
+    https://arxiv.org/pdf/1801.07090
+
+[6] Z-Shave: Exploiting Z-Wave Downgrade Attacks (Pen Test Partners, 2018)
+    https://pentestpartners.com/security-blog/z-shave-exploiting-z-wave-downgrade-attacks/
+
+[7] Z-Wave S2 Security Framework (Silicon Labs SDK Documentation)
+    https://docs.silabs.com/z-wave/8.0.0/how-to-use-certified-apps-in-z-wave/04-sdk-and-framework-introduction
+
+[8] ZCOVER: Z-Wave Controller Fuzzing (DSN 2025, Korea University)
+    — 12 CVEs from position-sensitive mutation fuzzing of Z-Wave controllers
+
+[9] VFuzz: Vulnerability-Oriented Fuzzing for Z-Wave (same lab)
+    — 28+ DoS vulnerabilities, 18+ CVEs from Z-Wave device fuzzing

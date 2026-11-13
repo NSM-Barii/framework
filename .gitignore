@@ -2,3 +2,9 @@ src/__pycache__/
 src/venv
 src/*.pyc
 src/*.cpython-313.pyc
+py_modules/__pycache__/nsm_telnet.cpython-313.pyc
+
+
+captures/
+docs/CVE_HUNTING_PLAYBOOK.md
+

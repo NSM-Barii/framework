@@ -1,0 +1,232 @@
+RF FUNDAMENTALS
+================
+Radio frequency basics for SDR and wireless security research.
+
+
+WHAT IS RF
+----------
+Radio frequency (RF) is electromagnetic energy in the range of about
+3 kHz to 300 GHz. It travels at the speed of light and does not need
+a physical medium — it propagates through air, walls, and vacuum. [1]
+
+The relationship between frequency and wavelength:
+
+    wavelength (m) = speed of light / frequency
+    wavelength = 300,000,000 / frequency_in_hz
+
+    908.42 MHz (Z-Wave)  ->  wavelength = 0.33 m  (about 13 inches)
+    2.4 GHz (WiFi/BLE)   ->  wavelength = 0.125 m (about 5 inches)
+    5.8 GHz (WiFi 5)     ->  wavelength = 0.052 m (about 2 inches)
+
+Higher frequency = shorter wavelength = shorter range but more data
+Lower frequency = longer wavelength = longer range but less data
+
+This is why Z-Wave at 908 MHz reaches further through walls than
+WiFi at 2.4 GHz, and why 5 GHz WiFi has shorter range than 2.4 GHz. [1]
+
+
+FREQUENCY BANDS
+---------------
+Wireless protocols are assigned to specific frequency bands:
+
+    Band              Frequency        Protocols
+    ----              ---------        ---------
+    Sub-GHz           300-928 MHz      Z-Wave, LoRa, 433 MHz OOK devices,
+                                       garage openers, car key fobs
+    ISM 2.4 GHz       2400-2483 MHz    WiFi, BLE, Zigbee, Thread, Matter
+    ISM 5 GHz         5150-5850 MHz    WiFi 5/6
+    ISM 6 GHz         5925-7125 MHz    WiFi 6E/7
+
+"ISM" = Industrial, Scientific, Medical — unlicensed bands anyone can
+use without a radio license, which is why IoT devices live here. [1]
+
+The sub-GHz band is less standardized — different devices use different
+frequencies and modulations, making it a fertile ground for finding
+devices with weak or no security.
+
+
+SIGNAL PROPERTIES
+-----------------
+Every RF signal has four properties:
+
+    Frequency   — how many cycles per second (Hz)
+    Amplitude   — how strong the signal is (power level)
+    Phase       — where in its cycle the wave is at a given moment
+    Bandwidth   — how wide the signal is in frequency space
+
+Modulation changes one or more of these properties to encode data
+onto the carrier wave. [1][2]
+
+
+MODULATION — DIGITAL
+---------------------
+Digital modulation encodes discrete bits (1s and 0s) onto a carrier.
+There are three fundamental types, corresponding to the three signal
+properties you can change: [2][3]
+
+ASK (Amplitude Shift Keying):
+    - Amplitude changes to represent bits
+    - Simplest to implement
+    - Weakest noise immunity — noise corrupts amplitude easily
+
+    OOK (On-Off Keying) is a special case of ASK:
+        - Carrier ON = 1, carrier OFF = 0
+        - The simplest possible digital modulation
+        - Used by: 433 MHz garage openers, car key fobs, cheap RF
+          remotes, weather stations
+        - Easy to capture and replay — many devices have NO security
+          beyond the modulation itself (CWE-294: replay attacks) [2][3]
+
+FSK (Frequency Shift Keying):
+    - Frequency shifts between two (or more) values to represent bits
+    - Better noise immunity than ASK
+    - Requires more bandwidth than ASK or PSK
+    - GFSK (Gaussian FSK) applies a Gaussian filter to smooth
+      transitions, reducing bandwidth — used by BLE and Z-Wave
+
+    Z-Wave specifically uses NRZ FSK at 40 kbps:
+        - Two frequencies: center +20 kHz = 0, center -20 kHz = 1
+        - NRZ (Non-Return-to-Zero): the signal stays at the shifted
+          frequency for the full bit period [2][3]
+
+PSK (Phase Shift Keying):
+    - Phase angle shifts to represent bits
+    - BPSK: 0° = 0, 180° = 1 (1 bit per symbol)
+    - QPSK: 4 phase positions (2 bits per symbol)
+    - 8-PSK: 8 positions (3 bits per symbol)
+    - Higher order = more bits per symbol but requires higher SNR
+    - Used by: satellite communication, some WiFi modes [2][3]
+
+QAM (Quadrature Amplitude Modulation):
+    - Combines amplitude AND phase shifts
+    - 16-QAM: 4 amplitude levels x 4 phase positions = 4 bits/symbol
+    - 64-QAM: 6 bits/symbol, 256-QAM: 8 bits/symbol
+    - Higher density = higher throughput but needs cleaner signal
+    - Used by: WiFi (802.11ac uses up to 256-QAM, 802.11ax up to
+      1024-QAM), cable TV, LTE [2][3]
+
+
+POWER AND dBm
+-------------
+RF power is measured in dBm (decibels relative to 1 milliwatt).
+
+    dBm     Power          Example
+    ---     -----          -------
+    +30     1 W            WiFi router (typical max)
+    +20     100 mW         Bluetooth Class 1 (100m range)
+    +10     10 mW          Z-Wave transmitter
+    +4      2.5 mW         BLE (typical)
+    0       1 mW           Reference point
+    -10     0.1 mW         Very weak transmitter
+    -30     0.001 mW       Received signal across a room
+    -70     —              Decent WiFi signal (usable)
+    -85     —              Weak WiFi signal (marginal)
+    -100    —              Near noise floor for most receivers
+
+The dB scale is logarithmic:
+    +3 dB  = double the power
+    -3 dB  = half the power
+    +10 dB = 10x the power
+    +20 dB = 100x the power
+
+So a +30 dBm signal is 1000x more powerful than a 0 dBm signal. [4]
+
+
+SNR — SIGNAL TO NOISE RATIO
+-----------------------------
+SNR = signal power - noise floor (in dB)
+
+    Signal: -60 dBm, Noise floor: -90 dBm
+    SNR = -60 - (-90) = 30 dB  (excellent — easy to decode)
+
+    Signal: -80 dBm, Noise floor: -85 dBm
+    SNR = -80 - (-85) = 5 dB   (terrible — barely decodable)
+
+Every receiver has a minimum SNR to decode a given modulation:
+    OOK:  ~10 dB (simple, tolerant)
+    FSK:  ~12 dB
+    BPSK: ~10 dB
+    QPSK: ~13 dB
+    64-QAM: ~26 dB (complex, demanding)
+
+This is why WiFi falls back to lower data rates at distance — as SNR
+drops, the AP switches from 256-QAM to 64-QAM to 16-QAM to QPSK to
+BPSK, trading throughput for reliability. [4]
+
+
+SDR — SOFTWARE DEFINED RADIO
+------------------------------
+Traditional radios have fixed hardware for each modulation and
+frequency. An SDR digitizes the raw RF signal at the antenna and
+does all demodulation in software. This means one device can receive
+(and often transmit) on any frequency and any modulation the software
+supports. [5]
+
+The signal chain:
+
+    Antenna -> LNA -> Mixer -> ADC -> [Digital IQ samples] -> Software
+
+    LNA:   Low Noise Amplifier — boosts weak signals before processing
+    Mixer: Shifts the signal down to a lower frequency (baseband)
+    ADC:   Analog-to-Digital Converter — samples the analog signal
+
+The output is IQ (In-phase / Quadrature) data — pairs of values
+representing the signal's amplitude and phase at each sample point.
+This is what hackrf_transfer captures to a file. [5]
+
+IQ samples are stored as interleaved int8 values:
+    [I0, Q0, I1, Q1, I2, Q2, ...]
+
+    File size = sample_rate * 2 * duration_seconds bytes
+    (factor of 2 because each sample has an I and Q value)
+
+HackRF One specs relevant to this framework:
+    Frequency range:   1 MHz to 6 GHz
+    Sample rate:       up to 20 Msps
+    Resolution:        8-bit (int8 IQ)
+    Bandwidth:         up to 20 MHz
+    Half-duplex:       can transmit OR receive, not both at once [5]
+
+
+PROPAGATION
+-----------
+RF signals weaken as they travel. The main factors: [1]
+
+Free-space path loss: signal weakens with the square of distance.
+    Doubling the distance = 6 dB loss (1/4 the power)
+
+Absorption: walls, floors, and materials absorb RF energy.
+    Material          Approximate loss per pass
+    --------          -------------------------
+    Drywall           3 dB
+    Wood door         4 dB
+    Concrete wall     10-15 dB
+    Brick             8-12 dB
+    Metal             20+ dB (near-total block)
+
+Reflection: signals bounce off metal and concrete surfaces, causing
+multipath — the receiver gets the same signal via multiple paths
+at slightly different times. This can cause constructive interference
+(stronger signal) or destructive interference (signal cancellation).
+
+Diffraction: signals bend around edges of obstacles. Lower frequencies
+diffract more, which is why sub-GHz signals "wrap around" corners
+better than 2.4 GHz. [1]
+
+
+SOURCES
+-------
+[1] ARRL Handbook for Radio Communications (ARRL, 102nd edition)
+    — standard reference for RF propagation, bands, and antenna theory
+
+[2] RF Wireless World — ASK, FSK, PSK Digital Modulation
+    https://www.rfwireless-world.com/terminology/modulation/ask-fsk-psk-digital-modulation-techniques
+
+[3] Stanford EE179 — Lecture 7: Digital Modulation
+    https://web.stanford.edu/~pauly/ee179/notes/Lecture_7.pdf
+
+[4] dBm and RF Power (various — Rohde & Schwarz, Keysight)
+    — standard industry references for power measurement
+
+[5] Great Scott Gadgets — HackRF One Documentation
+    https://greatscottgadgets.com/hackrf/
