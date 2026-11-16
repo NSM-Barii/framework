@@ -45,7 +45,7 @@ SEC_LEVEL = {0x98: "S0", 0x9F: "S2"}
 FRAME_REF = {
     "home":    "a1b2c3d4",                 # bytes 0-3  — network ID (always plaintext)
     "src":     1,                           # byte 4     — sender (1 = controller)
-    "dst":     5,                           # byte 8     — destination (5 = door lock)
+    "dst":     5,                           # byte 8     — destination (5 = door lock or IoT device)
     "fc":      (0x41, 0x01),                # bytes 5-6  — singlecast, seq=1
     "len":     12,                          # byte 7     — total frame length incl checksum
     "cc":      0x98,                        # byte 9     — SECURITY_S0
