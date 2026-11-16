@@ -200,7 +200,7 @@ Z-WAVE CHIP GENERATIONS
     700 series   — 100 kbps Long Range, S2, improved battery life
     800 series   — latest, Z-Wave Long Range 2, enhanced security
 
-The 800 series (like in your SmartRent Alloy Hub) added measures
+The 800 series added measures
 against the S0 downgrade attack. Older 300/500 series devices are
 the primary targets for S0-based attacks. [2][4]
 

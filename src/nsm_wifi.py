@@ -864,7 +864,7 @@ class War_Driving():
         """This will be in charge of running class wide logic"""
 
 
-        if not Variables.wifi_war_driving: return False
+        if not Variables.wifi_wardrive: return False
 
 
         # SET VARS

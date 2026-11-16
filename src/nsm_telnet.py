@@ -30,7 +30,7 @@ class Telnet_Brute_Forcer():
         """Who to bruteforce"""
 
 
-        host = console.input(f"[bold green]Enter host: ").strip() or "192.168.1.172"
+        host = console.input(f"[bold green]Enter host: ").strip() or "192.168.1.1"
         port = console.input(f"[bold green]Enter port: ").strip()   or 23
         if not host: console.print("[bold red]Please enter a valid host")
         #host = ipaddress.ip_address(address=host)

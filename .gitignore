@@ -5,6 +5,8 @@ src/*.cpython-313.pyc
 py_modules/__pycache__/nsm_telnet.cpython-313.pyc
 
 
+_archive/py_modules/__pycache__/
 captures/
 docs/CVE_HUNTING_PLAYBOOK.md
+src/SMARTRENT_ZWAVE_HANDOFF.txt
 

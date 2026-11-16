@@ -29,6 +29,14 @@ class Variables():
     # ===============
     #  METHOD TO USE
     # ===============
+
+
+
+    # === FILE SAVING ===
+    file_save = False
+    file_name = False
+
+
     
     # BLE
     ble_wardrive        = False
@@ -43,11 +51,32 @@ class Variables():
     wifi_deauth_attack  = False
     wifi_beacon_flood   = False
     wifi_evil_twin      = False
-    wifi_war_driving    = False
+    wifi_wardrive    = False
     wifi_ping_me        = False
 
     # Flock
     flock_spoof         = False
+
+    # ZWave
+    zwave_wardrive = False 
+    zwave_record   = False
+    zwave_analyze  = False
+    zwave_zshave   = False # THIS IS COMING SOON - IF YOUR READING THIS YOUR A G
+
+    zwave_home_hex = False
+
+
+    # TELNET
+    telnet   = False
+
+
+    # ARP
+    arp_scan   = False
+    arp_poison = False
+
+
+    # DISCOVER (mDNS/SSDP)
+    discover = False
 
     
     # ==============
@@ -62,6 +91,8 @@ class Variables():
     time   = False 
     vendor = False
     mac    = False
+    mac_router = False
+    mac_fake   = ""
     
     # DUMP GATT
     dump   = False
@@ -79,23 +110,24 @@ class Variables():
     
 
 
-    # TELNET
-    telnet   = False
+
 
     # ===============
-    #  WiFi METHODS
+    #  WiFi/Network METHODS
     # ===============
     
     iface     = "wlan0mon"  # FOR MONITOR MODE
-    subnet    = "192.168.1.0/24"
+    ip_subnet    = "192.168.1.0/24"
     ip_router = "192.168.1.1"
     ip_local  = None
     verbose   = False
+    delay     = 2
+
+
 
     # =====================
     # MONITOR MODE ATTACKS
     # =====================
-
 
     # DEFAULT
     timeout = 15
@@ -120,3 +152,26 @@ class Variables():
 
     reasons = [4,5,7,15]
 
+
+
+    # ============
+    # Generic SDR
+    # ============
+
+    gain_amp = 14
+    gain_lna = 24
+    gain_vga = 24
+
+    gain_capture = False
+
+    freq        = False
+    freq_offset = 600e3
+    modulation  = {
+        "zwave": 908.42e6
+    }
+
+    sample_rate = 2e6
+    num_samples = int(sample_rate * 10)  # 10 SECOND CAPTURE DEFAULT
+
+
+    

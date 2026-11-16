@@ -105,18 +105,18 @@ APPLIED: Z-WAVE FRAME
 ----------------------
 A real Z-Wave SECURITY_NONCE_GET frame on the wire:
 
-    Raw hex: d8 e5 c2 b4 01 41 01 0c 08 98 40 29
+    Raw hex: a1 b2 c3 d4 01 41 01 0c 05 98 40 6b
 
     Bytes   Hex           Field    Meaning
     -----   -----------   ------   -----------------------------------
-    0-3     d8 e5 c2 b4   HomeID   Network identifier (always plaintext)
+    0-3     a1 b2 c3 d4   HomeID   Network identifier (always plaintext)
     4       01            Src      Sender node (1 = controller)
     5-6     41 01         FC       Frame control (singlecast, seq=1)
     7       0c            Len      Total frame length = 12
-    8       08            Dst      Destination node (8 = Yale lock)
+    8       05            Dst      Destination node (5 = door lock)
     9       98            CC       Command class (SECURITY_S0)
     10      40            Cmd      Command (NONCE_GET)
-    11      29            Chk      XOR checksum (seed 0xFF)
+    11      6b            Chk      XOR checksum (seed 0xFF)
 
 12 hex pairs = 12 bytes = 96 bits on the wire.
 

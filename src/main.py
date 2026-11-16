@@ -3,6 +3,8 @@
 
 
 # UI IMPORTS
+from ast import arg
+from numpy import var
 from rich.panel import Panel
 import pyfiglet
 
@@ -18,6 +20,10 @@ from nsm_wifi import SSID_Sniffer, Client_Sniffer, Deauth_Attacker, Evil_Twin, B
 from nsm_telnet import Telnet_Brute_Forcer
 from nsm_database import DataBase
 from nsm_flock import Flock_Spoofer
+from nsm_zwave import ZWave_Capture, ZWave_Recon
+from nsm_hackrf import Hack_RF
+from nsm_arp import ARP_Controller
+from nsm_ssdp_mdns import LAN_Sniffer
 
 # CONSTANTS
 console = Variables.console
@@ -102,30 +108,90 @@ class Main_Menu():
         # ==========================
         parser.add_argument("-t", type=float, default=10, help="Scan timeout / delay in seconds (default: 10)")
         parser.add_argument("-m", help="Target MAC address")
-        parser.add_argument("-i", "--iface", help="Network interface (default: wlan1)")
-        
+        parser.add_argument("-i", "--iface", help="Network interface (default: wlan1)")       
+        parser.add_argument("--delay", help="This option will be used to set a delay in between repeated operations!")
+        parser.add_argument("--subnet", help="This option will be used to pass along subnet/cidr") 
+        parser.add_argument("--router-ip", help="This option will be used to spoof the routers IP")
+        parser.add_argument("--router-mac", help="This option will be used to spoof the routers MAC, if not given program will send an ARP request to the routers ip asking for its mac")
+        parser.add_argument("--fake-mac", default="00:12:ff:12:44:12", help="This option will be used to pass along a fake mac address that will be used for poisoning/spoofing")
 
 
         # ===============
-        #  OTHERS // LOL
+        #  Telnet
         # ===============
         parser.add_argument("--telnet", action="store_true", help="Telnet dictionary attack")
 
+
+
+        # ============
+        # mDNS/SSDP
+        # ============
+        parser.add_argument("-discover", action="store_true", help="This option will allow for LAN device discovery via both mDNS and SSDP")
+
+
+
+        # ======
+        # ARP
+        # ======
+        parser.add_argument("-arp-scan", action="store_true", help="This option will allow for an arp scan")
+        parser.add_argument(f"-arp-poison", action="store_true", help="This option will allow use to perform an ARP Poison attack. Commands needed: -m (will default to spamming all devices if not given one), -i (will use default if not given one), --subnet, --fake-mac (will use default if not given one), --router-ip")
+
+        # ===========
+        #  ZWave
+        # ===========
+        parser.add_argument("-zr", action="store_true", help="This option will be used to record a zwave traffic on 908.40 MHz")
+        parser.add_argument("-zw", action="store_true", help="This option will be used to view live ZWave traffic on 908.40MHz")
+        parser.add_argument("-za", help="This option will be used to pass a IQ file containing ZWave traffic to later be demodulated and analyze")
+        parser.add_argument("--home-hex", help="This option will allow a user to pass the home hex of which we will use as a filter when parsing through given IQ file")
+    
+       
+
+
+
+        # ============
+        # Generic SDR
+        # ============
+        parser.add_argument("--capture", action="store_true", help="This option will be used to capture zwave traffic")
+        parser.add_argument("--freq", type=float, help="This option will be used to control center frequency")
+
+        parser.add_argument("--amp", default=14, type=int, help="This option will be used to control amp")
+        parser.add_argument("--lna", default=24, type=int, help="This option will be used to control lna")
+        parser.add_argument("--vga", default=24, type=int, help="This option will be used to control vga")
+
+        parser.add_argument("--sample-rate", default=2e6, type=float, help="This will be used to control sample rate")
+
+        parser.add_argument("--save", action="store_true", help="This option will be used to save a file")
+        parser.add_argument("--x", help="This option will be used to give a custom name to the capture")
+
+
+
+
+
         args = parser.parse_args()
+
 
 
         if args.help or len(sys.argv) == 1:
             console.print(panel)
             parser.print_help()
             exit()
+
         
 
-        # DEAUTH ATTACK
-        Variables.mac_dst   = args.dst or "ff:ff:ff:ff:ff:ff"
-        Variables.mac_src   = args.src or False
+        # SDR GENERIC
+        Variables.freq    = args.freq
+        Variables.sample_rate = args.sample_rate
 
+        Variables.gain_amp = args.amp
+        Variables.gain_lna = args.lna
+        Variables.gain_vga = args.vga
+
+        Variables.gain_capture = args.capture
+
+        
         # GENERIC CONFIG
         Variables.timeout   = args.t
+        Variables.delay     = args.delay or 2
         Variables.mac       = args.m
         Variables.iface     = args.iface or "wlan1"
         Variables.channel   = args.channel or 6
@@ -136,24 +202,25 @@ class Main_Menu():
         Variables.count     = args.count or 1
         Variables.realtime  = args.realtime
 
+        Variables.file_save = True if args.save else False
+        Variables.file_name = args.x
+
+ 
+        # DEAUTH ATTACK
+        Variables.mac_dst   = args.dst or "ff:ff:ff:ff:ff:ff"
+        Variables.mac_src   = args.src or False
+
+
         if args.reasons:  Variables.reasons = [int(r.strip()) for r in args.reasons.split(',')]
         else:             Variables.reasons = [4, 5, 7, 15] 
 
-        # ============
-        #  BLE FLAGS
-        # ============
-        if args.bw or args.bwv:
-            Variables.ble_wardrive  = True
-            Variables.war           = args.bw
-            Variables.vendor        = args.bwv
-
-        if args.bs or args.bsv:
-            Variables.ble_sniffer = True
-            Variables.scan        = args.bs
-            Variables.vendor      = args.bsv
-
-        if args.bd:
-            Variables.ble_enumeration = True
+        # BLE
+        Variables.ble_wardrive        = args.bw or args.bwv
+        Variables.war                 = args.bw
+        Variables.ble_sniffer         = args.bs or args.bsv
+        Variables.scan                = args.bs
+        Variables.vendor              = args.bwv or args.bsv
+        Variables.ble_enumeration     = args.bd
 
         if args.bf or args.bft:
             Variables.ble_fuzzer  = True
@@ -168,46 +235,57 @@ class Main_Menu():
             Variables.conn                = args.bc
             Variables.pair                = args.bcp or False
 
+        # WiFi
+        Variables.wifi_ssid_sniffer   = args.ws
+        Variables.wifi_client_sniffer = bool(args.wc);  Variables.mac_client = args.wc
+        Variables.wifi_deauth_attack  = bool(args.wd);  Variables.mac_src    = args.wd or False
+        Variables.wifi_beacon_flood   = bool(args.wb);  Variables.portal_num = args.wb
+        Variables.wifi_evil_twin      = bool(args.we);  Variables.portal_num = args.we
+        Variables.wifi_wardrive       = args.ww
+        Variables.wifi_ping_me        = args.wp
+        Variables.flock_spoof         = args.fs
 
-        # ============
-        #  WiFi FLAGS
-        # ============
-        if args.ws:
-            Variables.wifi_ssid_sniffer   = True
-
-        if args.wc:
-            Variables.wifi_client_sniffer = True
-            Variables.mac_client          = args.wc
-
-        if args.wd:
-            Variables.wifi_deauth_attack  = True
-            Variables.mac_src             = args.wd
-
-        if args.wb:
-            Variables.wifi_beacon_flood   = True
-            Variables.portal_num          = args.wb
-
-        if args.we:
-            Variables.wifi_evil_twin      = True
-            Variables.portal_num          = args.we
-
-        if args.ww:
-            Variables.wifi_war_driving    = True
+        # Network
+        Variables.telnet              = args.telnet
+        Variables.ip_subnet           = args.subnet   
+        Variables.ip_router           = args.router_ip
+        Variables.mac_router          = args.router_mac
+        Variables.mac_fake            = args.fake_mac 
         
+        # ZWave
+        Variables.zwave_wardrive = args.zw
+        Variables.zwave_record   = args.zr
+        Variables.zwave_analyze  = args.za
 
-        if args.wp:
-            Variables.wifi_ping_me        = True
-
-        if args.fs:
-            Variables.flock_spoof         = True
+        Variables.zwave_home_hex = args.home_hex
 
 
-        # ============
-        # OTHER FLAGS
-        # ============
-        if args.telnet: Variables.telnet = True
-        
+        # ARP
+        Variables.arp_scan   = args.arp_scan
+        Variables.arp_poison = args.arp_poison
+
+
+        # mDNS/SSDP
+        Variables.discover = args.discover
+
+
+
+
         if args.mm: DataBase.WiFi.monitor_mode(iface=args.mm)
+
+
+
+        text = pyfiglet.figlet_format(text="Framework")
+        console.print(f"[bold red]{text}")
+
+        console.print(
+            "\n       [bold cyan]IoT Exploitation & Wireless Research[/bold cyan]"
+            "\n\n         [bold yellow]BLE • WiFi • Z-Wave • Sub-GHz • SDR[/bold yellow]"
+            "\n\n              [bold magenta]Made by NSM-Barii[/bold magenta]\n"
+        )
+        print("\n")
+
+
 
         BLE_Sniffer.main();  BLE_Enumerater.main(); BLE_Fuzzer.main(); BLE_Connection_Spam.main()
         SSID_Sniffer.main(); Client_Sniffer.main(); Deauth_Attacker.main(); Beacon_Flooder.main(); Evil_Twin.main(); War_Driving.main(); You_Cant_DOS_ME.main()
@@ -215,6 +293,14 @@ class Main_Menu():
         Flock_Spoofer.main()
 
         Telnet_Brute_Forcer.main()
+
+        Hack_RF.main()
+
+        ZWave_Recon.main(); ZWave_Capture.main()
+
+        ARP_Controller.main()
+
+        LAN_Sniffer.main()
 
 
 

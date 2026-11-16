@@ -18,6 +18,7 @@ from scapy.layers.dot11 import Dot11, Dot11Beacon, Dot11Elt, Dot11Deauth, Dot11P
 # IMPORTS
 import manuf, json, os, threading, time, subprocess, socket
 from pathlib import Path
+from datetime import datetime
 from mac_vendor_lookup import MacLookup #vendors = MacLookup().load_vendors()
 
 
@@ -29,13 +30,44 @@ LOCK = Variables.LOCK
 console = Variables.console
 
 
+dir_captures = Path(__file__).parent.parent / "captures"  / "zwave"
+dir_captures.mkdir(exist_ok=True, parents=True)
+
+
+
+
+class FileSaving():
+    """This will touch captures dir"""
+
+
+    @classmethod
+    def make_file_name(cls):
+        """This will be responsible for giving us a file name to use for file saving"""
+
+
+        try:
+
+            if not Variables.file_save: return False
+    
+            if Variables.file_name: name = str(Variables.file_name)
+            else:                   name = str(f"{datetime.now().strftime("%d_%m_%Y__%H_%M_%S")}")
+
+
+            Variables.file_save = dir_captures / f"zwave_{name}.cfile"
+            console.print(f"[bold green][+] File_save path: {Variables.file_save}")
+            return True
+    
+
+        except Exception as e:
+            console.print(f"[bold red][-] Exception Error:[yellow] {e}")
+            return False
+
+
 
 
 
 class DataBase():
     """This will touch database dir"""
-
-
 
 
     
@@ -393,7 +425,6 @@ class DataBase():
                     console.print(f"[bold red][!] Exception Error:[bold yellow] {e}")
 
 
-
     class WiFi():
         """Wifi database"""
 
@@ -606,8 +637,8 @@ class DataBase():
             )
 
             subprocess.run(["iwconfig"])
-            
-
+    
+  
 
 class Background_Threads:
     """This module will house background permanent running threads"""

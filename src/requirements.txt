@@ -7,7 +7,7 @@ manuf
 pyyaml
 telnetlib3
 ipaddress
-
+numpy
 
 
 scapy
