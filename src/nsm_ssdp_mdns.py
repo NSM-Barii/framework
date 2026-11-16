@@ -3,6 +3,8 @@
 # THE CODE FROM WITHIN THIS MODULE IS BRANCHED OFF OF ONE OF MY OLDER PROGRAMS: https://github.com/NSM-Barii/Ezra/blob/main/src/sniffer.py
 
 # UI IMPORTS
+import datetime
+
 from rich.live import Live
 
 
@@ -12,6 +14,7 @@ import threading, time
 
 
 # NSM MODULES
+from nsm_database import FileSaving
 from nsm_vars import Variables
 
 
@@ -49,6 +52,19 @@ class LAN_Sniffer():
     pkts        = 0
 
 
+    data = {
+        "time_stamp": 0,
+        "total_devices": 0,
+        "total_pkts": 0,
+        "total_mdns": 0,
+        "total_ssdp": 0,
+        "devices": {},
+        "pkts": []
+
+        
+    }
+
+
     @classmethod
     def _categorize(cls, *fields):
         """Checks fields against known keywords and increments the right counter"""
@@ -65,8 +81,35 @@ class LAN_Sniffer():
 
         cls.dev_total += 1
 
-    
-    
+
+
+    @classmethod
+    def _update_device(cls, ip, proto, services=(), server=False, location=False, usn=False, name=False, data=False):
+        """Aggregate the useful fields from each packet into one record per device"""
+
+
+        dev = cls.devices.get(ip)
+
+        if dev is None:
+            dev = {"ip": ip, "protos": [], "services": [], "name": False, "server": False, "location": False, "usn": False, "data": False, "pkts": 0}
+            cls.devices[ip] = dev
+
+
+        dev["pkts"] += 1
+
+        if proto not in dev["protos"]: dev["protos"].append(proto)
+
+        for s in services:
+            if s and s not in dev["services"]: dev["services"].append(s)
+
+        if server   and not dev["server"]:   dev["server"]   = server
+        if location and not dev["location"]: dev["location"] = location
+        if usn      and not dev["usn"]:      dev["usn"]      = usn
+        if name     and not dev["name"]:     dev["name"]     = name
+        if data     and not dev["data"]:     dev["data"]     = data
+
+
+
     @classmethod
     def _query_pkts(cls):
         """This will send out a ssdp request, resulting in devices respondng back"""
@@ -94,8 +137,20 @@ class LAN_Sniffer():
         console.print("[bold cyan][+] SSDP Query  →  239.255.255.250:1900\n")
 
         while True:
+
             send(pkt_mdns, verbose=False)
             send(pkt_ssdp, verbose=False)
+            
+            cls.data["total_pkts"] = cls.pkts
+            cls.data["total_devices"] = len(cls.devices)
+            cls.data["total_mdns"]   = cls.dev_mdns
+            cls.data["total_ssdp"]   = cls.dev_ssdp
+            cls.data["devices"]      = {str(i): dev for i, dev in enumerate(cls.devices.values(), start=1)}
+
+
+            if Variables.file_save: FileSaving.push_mdns_ssdp(data=cls.data)
+
+            
             time.sleep(Variables.delay)
 
 
@@ -135,7 +190,8 @@ class LAN_Sniffer():
         
 
         cls.pkts +=1
-        device = {
+
+        packet = {
             "#": cls.pkts,
             "Proto": "SSDP",
             "ip_src": f"{ip_src}:{port_src}",
@@ -145,9 +201,15 @@ class LAN_Sniffer():
             "server": server,
             "usn": usn
         }
+
+        cls.data["pkts"].append(packet)
+
         if not any([type, server, usn]): return False
 
+        cls._update_device(ip_src, "SSDP", services=[type], server=server, location=location, usn=usn)
+
         if ip_src not in cls.ip_srcs:
+
             cls.ip_srcs.append(ip_src)
             cls._categorize(type, server, usn)
             cls.dev_ssdp += 1
@@ -211,7 +273,8 @@ class LAN_Sniffer():
         if not any([question, name, data]): return False
 
         cls.pkts +=1
-        device = {
+
+        packet = {
             "#": cls.pkts,
             "proto": "mDNS",
             "ip_src": f"{ip_src}:{port_src}",
@@ -220,6 +283,11 @@ class LAN_Sniffer():
             "name": name,
             "data": data
         }
+
+        cls.data["pkts"].append(packet)
+
+        cls._update_device(ip_src, "mDNS", services=[question], name=name, data=data)
+
         if ip_src not in cls.ip_srcs:
             cls.ip_srcs.append(ip_src)
             cls._categorize(question, name, data)
@@ -263,12 +331,14 @@ class LAN_Sniffer():
 
         if not Variables.discover: return False
 
-
+   
         console.print(
             "\n[bold green][+] Sniffing mDNS and SSDP traffic!"
             f"\n   - mDNS: {PORT_MDNS}"
             f"\n   - SSDP: {PORT_SSDP}\n"
         )
+
+        cls.data["time_stamp"] = datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
 
         threading.Thread(target=cls._query_pkts, args=(), daemon=True).start()
         

@@ -2,10 +2,9 @@
 
 
 # UI IMPORTS
-from ast import While
-from platform import libc_ver
-from socket import if_nameindex
-from turtle import st
+
+import datetime
+
 
 from rich.panel import Panel
 from rich.table import Table
@@ -23,7 +22,7 @@ import threading, time, ipaddress, os, argparse, sys
 
 # NSM IMPORTS
 from nsm_vars import Variables
-from nsm_database import DataBase
+from nsm_database import DataBase, FileSaving
 
 
 
@@ -160,6 +159,8 @@ class ARP_Controller():
 
         console.print(f"\n[bold green][+] Devices Found:[/bold green] {len(devices)}")
 
+        cls._save_scan(devices=devices)
+
         return devices
 
 
@@ -261,10 +262,70 @@ class ARP_Controller():
 
 
 
+    @classmethod
+    def _save_scan(cls, devices, verbose=False):
+        """This method will be used to save ARP scan results"""
+
+
+        if not Variables.file_save: return False
+
+
+        num  = 0
+        data = {
+            "time_stamp": "",
+            "total_devices": 0,
+            "devices": {}
+        }
+
+        t = {
+            "time_stamp": "11-11-2003_11-22-22",
+            "total_devices": 16,
+            "devices": {
+                "1": {
+                    "ip": "192.168.1.1",
+                    "mac": "00:EE:EF:22:44:66",
+                    "vendor": "Sony Interactive Entertainment Systems",
+                },
+                "2": {
+                    "ip": "192.168.1.2",
+                    "mac": "22:AF:44:66:22:12",
+                    "vendor": "Microsofy Inc"
+                }
+            }
+        }
+
+
+        for device in devices:
+
+            num += 1
+            ip  = device[0]
+            mac = device[1]
+            vendor = device[2]
+
+            data["devices"][num] = {
+                "ip": ip,
+                "mac": mac,
+                "vendor": vendor
+            }
+
+
+        data["total_devices"] = len(devices)
+        data["time_stamp"]    = datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+
+
+        FileSaving.push_arp(data=data)
+
+
+
+
+
 
     @classmethod
     def main(cls):
         """This method will be responsible for controlling the module"""
+
+
+        if not Variables.arp_poison and not Variables.arp_scan: return False
 
 
         if not Variables.iface:     console.print(f"[bold red][!] iface needed and not given by user!"); return False

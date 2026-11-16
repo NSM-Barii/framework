@@ -182,7 +182,7 @@ class Hack_RF():
         if not Variables.freq: console.print("[bold red][!] no freq given goofy!"); return False
 
 
-        FileSaving.make_file_name()
+        FileSaving.push_cfile()
 
 
         if Variables.gain_capture: cls.capture(freq=Variables.freq, file_out=Variables.file_save)

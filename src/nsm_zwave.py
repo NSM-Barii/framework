@@ -449,6 +449,8 @@ class ZWave_Capture():
         console.print(f"\n\n[{c2}]=====  Gain Settings  =====",
                       f"\nAMP: [{c1}]{Variables.gain_amp}\nLNA: [{c1}]{Variables.gain_lna}\nVGA: [{c1}]{Variables.gain_vga}[{c1}]"
         )
+
+        if Variables.file_save: FileSaving.push_cfile()
         if Variables.zwave_record: return cls._record()
         elif Variables.zwave_analyze: return cls._analyze()
 

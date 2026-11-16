@@ -40,12 +40,18 @@ class FileSaving():
     """This will touch captures dir"""
 
 
+    json_main = Path(__file__).parent.parent / "captures" 
+
+
+
     @classmethod
-    def make_file_name(cls):
+    def push_cfile(cls):
         """This will be responsible for giving us a file name to use for file saving"""
 
 
         try:
+
+            pre = "stream"
 
             if not Variables.file_save: return False
     
@@ -53,7 +59,10 @@ class FileSaving():
             else:                   name = str(f"{datetime.now().strftime("%d_%m_%Y__%H_%M_%S")}")
 
 
-            Variables.file_save = dir_captures / f"zwave_{name}.cfile"
+            if Variables.zwave_wardrive or Variables.zwave_record: pre = "zwave"
+
+
+            Variables.file_save = dir_captures / f"{pre}_{name}.cfile"
             console.print(f"[bold green][+] File_save path: {Variables.file_save}")
             return True
     
@@ -64,6 +73,56 @@ class FileSaving():
 
 
 
+    @classmethod
+    def push_json(cls, data, path, verbose=True):
+        """This method will be used as a standard method for pushing json files"""
+
+
+        try:
+
+            path = cls.json_main / path
+            path.mkdir(exist_ok=True, parents=True)
+
+            if not Variables.file_name: Variables.file_name = f"{datetime.now().strftime("%m-%d-%Y_%H-%M-%S")}.json"
+
+            file_name = f"{path}/{Variables.file_name}"
+
+            with open(file_name, "w") as file:
+
+                json.dump(data, file, indent=4)
+           
+            if verbose: console.print(f"[bold green][+] File successfully pushed[bold yellow] --> {Variables.file_name}")
+
+
+        except Exception as e: console.print(f"[bold red][!] Exception Error:[yellow] {e}")
+
+
+
+    @classmethod
+    def push_arp(cls, data):
+        """This will push ARP results"""
+
+
+        cls.push_json(data=data, path="arp")
+
+
+
+    @classmethod
+    def push_mdns_ssdp(cls, data):
+
+
+        cls.push_json(data, path="mdns_ssdp")
+
+
+
+    @classmethod
+    def push_zwave(cls, data):
+        """This will push ZWave results"""
+
+
+        cls.push_json(data=data, path="zwave")
+        
+  
 
 
 class DataBase():
@@ -363,9 +422,11 @@ class DataBase():
             """This will use ringmast4r and wireshark vendor database"""
 
 
+            mac = mac.upper()
+
             vendor = DataBase.Bluetooth._get_vendor(mac=mac, verbose=verbose) or False; c = 1
 
-            if not vendor: vendor = DataBase.Bluetooth._get_vendor_new(mac=mac, verbose=verbose) or False; c = 2 
+            if not vendor: vendor = DataBase.Bluetooth._get_vendor_new(mac=mac, verbose=verbose) or False; c = 2
 
             return vendor
         
@@ -486,9 +547,11 @@ class DataBase():
             """This will use ringmast4r and wireshark vendor database"""
 
 
+            mac = mac.upper()
+
             vendor = DataBase.WiFi._get_vendor(mac=mac, verbose=verbose) or False; c = 1
 
-            if not vendor: vendor = DataBase.WiFi._get_vendor_new(mac=mac, verbose=verbose) or False; c = 2 
+            if not vendor: vendor = DataBase.WiFi._get_vendor_new(mac=mac, verbose=verbose) or False; c = 2
 
             return vendor
         
