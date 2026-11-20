@@ -116,7 +116,7 @@ class Variables():
     #  WiFi/Network METHODS
     # ===============
     
-    iface     = "wlan0mon"  # FOR MONITOR MODE
+    iface     = False    #  "wlan0mon"  # FOR MONITOR MODE <-- OLD VAR // PROGRAM WILL NO LONGER HOLD A STATIC VAR BY DEFAULT, INSTEAD WE WILL USE MODULES TO PULL THE VAR CURRENTLY BEING USED BY THE SYSTEM, AS THIS WAS NEEDED FOR CONTINUITY WITH ARP MODULES
     ip_subnet    = "192.168.1.0/24"
     ip_router = "192.168.1.1"
     ip_local  = None

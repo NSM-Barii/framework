@@ -193,7 +193,7 @@ class Main_Menu():
         Variables.timeout   = args.t
         Variables.delay     = args.delay or 2
         Variables.mac       = args.m
-        Variables.iface     = args.iface or "wlan1"
+        Variables.iface     = args.iface 
         Variables.channel   = args.channel or 6
         Variables.hop_delay = args.hop_delay or 0.25
         Variables.mode      = args.mode or 1        

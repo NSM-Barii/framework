@@ -13,7 +13,7 @@ import pyfiglet
 
 
 # NETWORK IMPORTS
-from scapy.all import Ether, ARP, srp, sendp, get_if_list, get_if_addr
+from scapy.all import Ether, ARP, srp, sendp, get_if_list, get_if_addr, conf
 
 
 # ETC IMPORTS
@@ -328,7 +328,7 @@ class ARP_Controller():
         if not Variables.arp_poison and not Variables.arp_scan: return False
 
 
-        if not Variables.iface:     console.print(f"[bold red][!] iface needed and not given by user!"); return False
+        if not Variables.iface:     console.print(f"[bold red][!] iface needed and not given by user... Using default Iface given by the system:[yellow] {conf.iface.name}\n");  Variables.iface = conf.iface.name
         if not Variables.ip_subnet: console.print(f"[bold red][!] subnet needed and not given by user!"); return False
         
         if Variables.arp_scan:     cls._scan(); return True
